@@ -55,18 +55,19 @@
         padding-bottom: 1mm !important;
       }
       .print-container.portrait-mode .equation-box {
-        padding: 1px 4px !important;
-        font-size: 10px !important;
+        padding: 1px 2px !important;
+        font-size: 11px !important;
       }
       .print-container.portrait-mode .equation-box input {
-        width: 28px !important;
+        width: 22px !important;
         height: 16px !important;
-        font-size: 10px !important;
+        font-size: 11px !important;
       }
       .print-container.portrait-mode .grid-cell {
-        width: 15.5px !important;
-        height: 15.5px !important;
-        font-size: 7.5px !important;
+        width: 8.8mm !important;
+        height: 8.8mm !important;
+        font-size: 11px !important;
+        font-weight: 800 !important;
         line-height: 1 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
@@ -99,9 +100,10 @@
         gap: 0.35rem !important;
       }
       .print-container.landscape-mode .grid-cell {
-        width: 20px !important;
-        height: 20px !important;
-        font-size: 9px !important;
+        width: 12mm !important;
+        height: 12mm !important;
+        font-size: 13px !important;
+        font-weight: 800 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
@@ -109,12 +111,19 @@
       .number-grid {
         display: grid !important;
         grid-template-columns: repeat(20, minmax(0, 1fr)) !important;
-        gap: 1px !important;
+        gap: 1.5px !important;
         margin: 0 auto !important;
+        width: 90% !important;
+      }
+
+      /* 列印線條與文字清晰度提升 */
+      * {
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
       }
     }
 
-    /* 20 欄數字網格矩陣 */
+    /* 20 欄數字網格矩陣 (預設 90% 寬度) */
     .number-grid {
       display: grid;
       grid-template-columns: repeat(20, minmax(0, 1fr));
@@ -122,12 +131,15 @@
       -webkit-touch-callout: none;
       -webkit-user-select: none;
       user-select: none;
+      width: 90%;
+      margin: 0 auto;
     }
 
     .grid-cell {
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
+      aspect-ratio: 1 / 1;
     }
   </style>
 </head>
@@ -672,61 +684,79 @@
         }
 
         const sheetBlock = document.createElement('div');
-        sheetBlock.className = 'single-sheet-block flex flex-col gap-4 relative';
         sheetBlock.className = 'single-sheet-block flex flex-col gap-4';
         sheetBlock.id = `sheet-block-${s}`;
 
-        // 頁眉學生資訊欄
-        sheetBlock.innerHTML = `
-          <div class="sheet-header flex justify-between items-end border-b-2 border-slate-800 pb-2 mb-2">
-            <div class="flex items-baseline gap-2">
-              <span class="title-badge text-xl sm:text-2xl font-black px-2.5 py-0.5 text-white rounded-lg" style="background-color: ${currentThemeColor};">乘法</span>
-              <h2 class="text-xl sm:text-2xl font-black tracking-wider text-slate-800">算算 ． 找找 ． 塗塗</h2>
-            </div>
-            <div class="flex gap-4 text-xs sm:text-sm font-bold text-slate-700">
-              <div>___年___班</div>
-              <div>姓名：________</div>
-              <div id="score-display-${s}">得分：______</div>
-            </div>
-          </div>
-
-          <div id="main-content-wrapper-${s}" class="flex flex-col gap-4">
-            <div id="left-section-${s}" class="flex flex-col gap-3">
-              <div id="equation-container-${s}" class="equation-container grid grid-cols-2 sm:grid-cols-5 gap-2"></div>
-              <div class="flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                <div class="target-badge w-10 h-10 rounded-xl text-white font-black text-2xl flex items-center justify-center shadow-inner shrink-0" style="background-color: ${currentThemeColor};">
-                  ${currentNum}
-                </div>
-                <div class="text-sm sm:text-base font-bold text-slate-700">
-                  請將「<span class="font-extrabold text-lg" style="color: ${currentThemeColor};">${currentNum} 的乘法</span>」答案的方格塗上顏色
-                </div>
+        if (s === 0) {
+          // 上題：包含完整標題、學生資訊、乘法算式、說明標籤與數字網格
+          sheetBlock.innerHTML = `
+            <div class="sheet-header flex justify-between items-end border-b-2 border-slate-900 pb-2 mb-2">
+              <div class="flex items-baseline gap-2">
+                <span class="title-badge text-xl sm:text-2xl font-black px-2.5 py-0.5 text-white rounded-lg" style="background-color: ${currentThemeColor};">乘法</span>
+                <h2 class="text-xl sm:text-2xl font-black tracking-wider text-slate-900">算算 ． 找找 ． 塗塗</h2>
+              </div>
+              <div class="flex gap-4 text-xs sm:text-sm font-bold text-slate-900">
+                <div>___年___班</div>
+                <div>姓名：________</div>
               </div>
             </div>
 
-            <div id="right-section-${s}" class="flex justify-center overflow-x-auto">
-              <div id="number-grid-${s}" class="number-grid gap-0.5 bg-slate-300 p-1.5 rounded-xl shadow-inner max-w-full touch-none select-none"></div>
-            </div>
-          </div>
+            <div id="main-content-wrapper-0" class="flex flex-col gap-4">
+              <div id="left-section-0" class="flex flex-col gap-3">
+                <div id="equation-container-0" class="equation-container grid grid-cols-10 gap-1 sm:gap-1.5"></div>
+                <div class="flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border-2 border-slate-300">
+                  <div class="target-badge w-10 h-10 rounded-xl text-white font-black text-2xl flex items-center justify-center shadow-inner shrink-0" style="background-color: ${currentThemeColor};">
+                    ${currentNum}
+                  </div>
+                  <div class="text-sm sm:text-base font-bold text-slate-900">
+                    請將「<span class="font-extrabold text-lg" style="color: ${currentThemeColor};">${currentNum} 的乘法</span>」答案的方格塗上顏色
+                  </div>
+                </div>
+              </div>
 
-          <div class="pt-2 border-t border-slate-200 text-center text-[10px] sm:text-xs text-slate-400 flex justify-between items-center">
-            <span>國小數學領域 數位自主學習單</span>
-            <span>設計：閒雲小築-數學小棧</span>
-          </div>
-        `;
+              <div id="right-section-0" class="flex justify-center overflow-x-auto w-full">
+                <div id="number-grid-0" class="number-grid gap-0.5 bg-slate-400 p-1.5 rounded-xl shadow-inner touch-none select-none"></div>
+              </div>
+            </div>
+
+            ${sheetCount === 1 ? `
+            <div class="pt-2 border-t border-slate-300 text-center text-[10px] sm:text-xs text-slate-500 flex justify-between items-center font-medium">
+              <span>國小數學領域 數位自主學習單</span>
+              <span>設計：閒雲小築-數學小棧</span>
+            </div>
+            ` : ''}
+          `;
+        } else {
+          // 下題：僅保留數字網格與底部頁尾宣告
+          sheetBlock.innerHTML = `
+            <div id="main-content-wrapper-${s}" class="flex flex-col gap-4 pt-2">
+              <div id="right-section-${s}" class="flex justify-center overflow-x-auto w-full">
+                <div id="number-grid-${s}" class="number-grid gap-0.5 bg-slate-400 p-1.5 rounded-xl shadow-inner touch-none select-none"></div>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-300 text-center text-[10px] sm:text-xs text-slate-500 flex justify-between items-center font-medium">
+              <span>國小數學領域 數位自主學習單</span>
+              <span>設計：閒雲小築-數學小棧</span>
+            </div>
+          `;
+        }
 
         container.appendChild(sheetBlock);
 
-        // 生成 10 個乘法算式
-        const eqContainer = document.getElementById(`equation-container-${s}`);
-        for (let i = 1; i <= 10; i++) {
-          const ans = currentNum * i;
-          const eqBox = document.createElement('div');
-          eqBox.className = 'equation-box flex items-center justify-between border-2 border-slate-300 rounded-lg p-1 bg-white font-mono font-bold text-xs';
-          eqBox.innerHTML = `
-            <span>${currentNum}×${i}=</span>
-            <input type="text" id="eq-input-${s}-${i}" data-ans="${ans}" class="w-9 text-center font-bold text-slate-800 outline-none border-b-2 border-slate-400 focus:border-orange-500 transition" placeholder="">
-          `;
-          eqContainer.appendChild(eqBox);
+        // 僅在上題 (s === 0) 生成 10 個乘法算式
+        if (s === 0) {
+          const eqContainer = document.getElementById(`equation-container-0`);
+          for (let i = 1; i <= 10; i++) {
+            const ans = currentNum * i;
+            const eqBox = document.createElement('div');
+            eqBox.className = 'equation-box flex items-center justify-between border-2 border-slate-400 rounded-lg px-1 py-1 bg-white font-mono font-bold text-xs sm:text-sm whitespace-nowrap text-slate-900';
+            eqBox.innerHTML = `
+              <span>${currentNum}×${i}=</span>
+              <input type="text" id="eq-input-0-${i}" data-ans="${ans}" class="w-6 sm:w-8 text-center font-bold text-slate-900 outline-none border-b-2 border-slate-500 focus:border-orange-500 transition p-0" placeholder="" oninput="syncEqInput(0, ${i}, this.value)">
+            `;
+            eqContainer.appendChild(eqBox);
+          }
         }
 
         // 渲染 14x20 網格
@@ -734,6 +764,10 @@
       }
 
       if (showAnswers) fillAnswers();
+    }
+
+    function syncEqInput(fromSheet, eqIdx, val) {
+      // 算式僅保留於上題，無須跨題同步
     }
 
     function renderGridDOM(sheetIdx) {
@@ -747,7 +781,7 @@
           const cellData = matrix[r][c];
           const cell = document.createElement('div');
           cell.id = `cell-${sheetIdx}-${r}-${c}`;
-          cell.className = 'grid-cell w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 bg-white flex items-center justify-center font-bold text-[10px] sm:text-xs text-slate-800 border border-slate-200 cursor-pointer transition-all duration-75 select-none rounded-sm active:scale-95';
+          cell.className = 'grid-cell aspect-square bg-white flex items-center justify-center font-extrabold text-xs sm:text-sm md:text-base text-slate-900 border border-slate-300 cursor-pointer transition-all duration-75 select-none rounded-sm active:scale-95';
           cell.innerText = cellData.val;
 
           cell.onpointerdown = (e) => {
@@ -848,11 +882,13 @@
 
     function fillAnswers() {
       for (let s = 0; s < gridMatrices.length; s++) {
-        for (let i = 1; i <= 10; i++) {
-          const input = document.getElementById(`eq-input-${s}-${i}`);
-          if (input) {
-            input.value = input.dataset.ans;
-            input.style.color = currentThemeColor;
+        if (s === 0) {
+          for (let i = 1; i <= 10; i++) {
+            const input = document.getElementById(`eq-input-0-${i}`);
+            if (input) {
+              input.value = input.dataset.ans;
+              input.style.color = currentThemeColor;
+            }
           }
         }
         for (let r = 0; r < 14; r++) {
@@ -864,42 +900,26 @@
     }
 
     function clearAnswersUI() {
-      for (let s = 0; s < gridMatrices.length; s++) {
-        for (let i = 1; i <= 10; i++) {
-          const input = document.getElementById(`eq-input-${s}-${i}`);
-          if (input) {
-            input.value = '';
-            input.style.color = '';
-          }
+      for (let i = 1; i <= 10; i++) {
+        const input = document.getElementById(`eq-input-0-${i}`);
+        if (input) {
+          input.value = '';
+          input.style.color = '';
         }
       }
       clearColoring();
     }
 
-    function clearColoring() {
-      for (let s = 0; s < gridMatrices.length; s++) {
-        for (let r = 0; r < 14; r++) {
-          for (let c = 0; c < 20; c++) {
-            applyPaint(s, r, c, false);
-          }
-        }
-      }
-    }
-
     function checkAnswers() {
-      let resultsHtml = '';
+      let cardsHtml = '';
       let allPerfect = true;
       let almostPerfect = false;
 
-      for (let s = 0; s < gridMatrices.length; s++) {
-        let eqCorrect = 0;
-        let totalTarget = 0;
-        let gridCorrectCount = 0;
-        let totalMistakes = 0;
-
-        for (let i = 1; i <= 10; i++) {
-          const input = document.getElementById(`eq-input-${s}-${i}`);
-          if (!input) continue;
+      // 算式統一對答案 (檢測上題的算式填寫狀況)
+      let eqCorrect = 0;
+      for (let i = 1; i <= 10; i++) {
+        const input = document.getElementById(`eq-input-0-${i}`);
+        if (input) {
           const userVal = parseInt(input.value.trim());
           const correctVal = parseInt(input.dataset.ans);
           if (userVal === correctVal) {
@@ -911,6 +931,20 @@
             input.classList.add('border-red-500');
           }
         }
+      }
+
+      // 最上方獨立乘法算式結算區塊
+      const eqSummaryHtml = `
+        <div class="bg-amber-50 p-3 rounded-xl border border-amber-200 text-slate-800 mb-4 text-center shadow-sm">
+          <span class="font-bold text-amber-900 text-sm sm:text-base">🔢 乘法算式（共10題）：</span>
+          <span class="font-black text-base sm:text-lg text-orange-600">對了 ${eqCorrect} / 10 題</span>
+        </div>
+      `;
+
+      for (let s = 0; s < gridMatrices.length; s++) {
+        let totalTarget = 0;
+        let gridCorrectCount = 0;
+        let totalMistakes = 0;
 
         for (let r = 0; r < 14; r++) {
           for (let c = 0; c < 20; c++) {
@@ -929,12 +963,6 @@
         const gridScore = totalTarget > 0 ? Math.max(0, Math.round(((totalTarget - totalMistakes) / totalTarget) * 100)) : 0;
         const totalScoreForSheet = Math.round((eqCorrect * 5) + (gridScore * 0.5)); 
 
-        // 即時寫入每題抬頭的得分欄位
-        const scoreDisplay = document.getElementById(`score-display-${s}`);
-        if(scoreDisplay) {
-            scoreDisplay.innerHTML = `得分：<span class="text-red-600 text-lg">${totalScoreForSheet}</span>`;
-        }
-
         if (eqCorrect !== 10 || gridScore !== 100) allPerfect = false;
         if (gridScore > 70 && gridScore < 100) almostPerfect = true;
 
@@ -943,18 +971,22 @@
           title = s === 0 ? '上題' : '下題';
         }
 
-        // 獨立生成該題的結算卡片 HTML
-        resultsHtml += `
+        // 生成該題著色完成度的結算卡片 HTML (不再包含乘法算式，移至上方)
+        cardsHtml += `
           <div class="bg-slate-50 p-4 rounded-xl text-left text-sm font-semibold text-slate-700 shadow-sm border border-slate-100 flex flex-col justify-between h-full">
             <div>
-              <div class="text-orange-600 font-black mb-2 border-b border-slate-200 pb-1.5 text-base">${title}</div>
-              <div class="flex justify-between items-center mb-1">
-                <span>乘法算式：</span>
-                <span class="font-bold text-slate-800">對了 ${eqCorrect} / 10 題</span>
-              </div>
+              <div class="text-orange-600 font-black mb-3 border-b border-slate-200 pb-1.5 text-base text-center">${title}</div>
               <div class="flex justify-between items-center mb-2">
                 <span>圖案著色完成度：</span>
                 <span class="font-bold text-slate-800">${gridScore}%</span>
+              </div>
+              <div class="flex justify-between items-center text-xs text-slate-500 mb-1">
+                <span>目標總格數：</span>
+                <span>${totalTarget} 格</span>
+              </div>
+              <div class="flex justify-between items-center text-xs text-slate-500 mb-3">
+                <span>失誤格數（漏塗/錯塗）：</span>
+                <span>${totalMistakes} 格</span>
               </div>
             </div>
             <div class="flex justify-between items-center text-red-600 pt-2 border-t border-slate-200">
@@ -972,17 +1004,16 @@
       const msgEl = document.getElementById('modal-msg');
       const detailsContainer = document.getElementById('modal-details-container');
 
-      detailsContainer.innerHTML = resultsHtml;
-
-      // 根據題數動態調整視窗寬度與內部佈局
       if (gridMatrices.length > 1) {
         modalBox.classList.remove('max-w-md');
         modalBox.classList.add('max-w-2xl');
-        detailsContainer.className = 'overflow-y-auto px-1 mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4';
+        detailsContainer.className = 'overflow-y-auto px-1 mb-4';
+        detailsContainer.innerHTML = eqSummaryHtml + `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">${cardsHtml}</div>`;
       } else {
         modalBox.classList.remove('max-w-2xl');
         modalBox.classList.add('max-w-md');
-        detailsContainer.className = 'overflow-y-auto px-1 mb-4 space-y-3';
+        detailsContainer.className = 'overflow-y-auto px-1 mb-4';
+        detailsContainer.innerHTML = eqSummaryHtml + cardsHtml;
       }
 
       if (allPerfect) {
