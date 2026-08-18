@@ -1229,16 +1229,16 @@
       gridMatrices = [generateSingleGridData(numRows, numCols)];
 
       // 1. 渲染題目頁
-      const qBlock = createSheetBlockElement(0, 0, false, includeVersion);
+      const qBlock = createSheetBlockElement(0, 0, false, includeVersion, 'number-grid-single-q');
       container.appendChild(qBlock);
       renderGridDOMForBatch(0, `number-grid-single-q`);
 
       // 2. 若附解答，渲染解答頁
       if (includeAnswer) {
-        const aBlock = createSheetBlockElement(0, 1, true, includeVersion);
+        const aBlock = createSheetBlockElement(0, 1, true, includeVersion, 'number-grid-single-a');
         container.appendChild(aBlock);
         renderGridDOMForBatch(0, `number-grid-single-a`);
-        fillBatchAnswers(0);
+        fillBatchAnswers(0, `number-grid-single-a`);
       }
     }
 
@@ -1342,7 +1342,7 @@
 
       setTimeout(() => {
         printWorksheet();
-      }, 300);
+      }, 350);
     }
 
     // 批次產生指定張數題目與解答頁 DOM
@@ -1363,24 +1363,26 @@
 
       // 1. 渲染全部題目頁 (Sheet 1..n)
       for (let s = 0; s < count; s++) {
-        const sheetBlock = createSheetBlockElement(s, globalSheetIndex++, false, includeVersion);
+        const gridId = `number-grid-q-${s}`;
+        const sheetBlock = createSheetBlockElement(s, globalSheetIndex++, false, includeVersion, gridId);
         container.appendChild(sheetBlock);
-        renderGridDOMForBatch(s, `number-grid-q-${s}`);
+        renderGridDOMForBatch(s, gridId);
       }
 
       // 2. 若附帶解答頁，渲染解答頁 (Sheet 1..n 解答)
       if (includeAnswers) {
         for (let s = 0; s < count; s++) {
-          const sheetBlock = createSheetBlockElement(s, globalSheetIndex++, true, includeVersion);
+          const gridId = `number-grid-a-${s}`;
+          const sheetBlock = createSheetBlockElement(s, globalSheetIndex++, true, includeVersion, gridId);
           container.appendChild(sheetBlock);
-          renderGridDOMForBatch(s, `number-grid-a-${s}`);
-          fillBatchAnswers(s);
+          renderGridDOMForBatch(s, gridId);
+          fillBatchAnswers(s, gridId);
         }
       }
     }
 
     // 建立單張學習單 DOM 區塊 (支援題目與解答模式，及版本標籤開關)
-    function createSheetBlockElement(dataIndex, displayIndex, isAnswerPage, includeVersion = true) {
+    function createSheetBlockElement(dataIndex, displayIndex, isAnswerPage, includeVersion = true, customGridId = null) {
       const today = new Date();
       const dateStr = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
       const versionLabel = includeVersion ? `[${dateStr}-第${dataIndex + 1}版${isAnswerPage ? '解答' : ''}]` : '';
@@ -1389,10 +1391,7 @@
       sheetBlock.className = 'single-sheet-block flex flex-col gap-4';
       sheetBlock.id = `sheet-block-batch-${displayIndex}`;
 
-      let gridId = `number-grid-b-${displayIndex}`;
-      if (displayIndex === 0 && !isAnswerPage) gridId = 'number-grid-single-q';
-      else if (displayIndex === 1 && isAnswerPage) gridId = 'number-grid-single-a';
-      else gridId = isAnswerPage ? `number-grid-a-${dataIndex}` : `number-grid-q-${dataIndex}`;
+      const gridId = customGridId || (isAnswerPage ? `number-grid-a-${dataIndex}` : `number-grid-q-${dataIndex}`);
 
       sheetBlock.innerHTML = `
         <div class="sheet-header flex justify-between items-end border-b-2 border-slate-900 pb-2 mb-2">
@@ -1504,13 +1503,12 @@
     }
 
     // 將指定數據索引的解答填入對應解答頁 DOM 網格
-    function fillBatchAnswers(dataIndex) {
+    function fillBatchAnswers(dataIndex, targetGridId = null) {
       setTimeout(() => {
         const matrix = gridMatrices[dataIndex];
         if (!matrix) return;
         
-        // 尋找對應解答網格 ID
-        let gridContainerId = `number-grid-a-${dataIndex}`;
+        let gridContainerId = targetGridId || `number-grid-a-${dataIndex}`;
         if (!document.getElementById(gridContainerId)) {
           gridContainerId = 'number-grid-single-a';
         }
