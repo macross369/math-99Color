@@ -23,6 +23,10 @@
 
     /* 列印專用樣式優化 */
     @media print {
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
       .no-print {
         display: none !important;
       }
@@ -49,13 +53,25 @@
       .print-container.portrait-mode .single-sheet-block {
         padding: 1mm 0 !important;
         margin-bottom: 0 !important;
+        page-break-after: always !important;
+        break-after: page !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
+      }
+      .print-container.portrait-mode .single-sheet-block:last-child {
+        page-break-after: auto !important;
+        break-after: auto !important;
       }
       .print-container.portrait-mode .sheet-header {
         margin-bottom: 3mm !important;
         padding-bottom: 1.5mm !important;
         border-bottom: 2px solid #0f172a !important;
+      }
+      .print-container.portrait-mode .title-badge {
+        color: #ffffff !important;
+        display: inline-block !important;
+        padding: 2px 10px !important;
+        border-radius: 8px !important;
       }
       .print-container.portrait-mode .equation-box {
         padding: 6px 10px !important;
@@ -79,18 +95,47 @@
         border-top: 1px solid #334155 !important;
         border-left: 1px solid #334155 !important;
         color: #0f172a !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
       }
       .print-container.portrait-mode .target-badge {
-        width: 32px !important;
-        height: 32px !important;
-        font-size: 18px !important;
+        width: 38px !important;
+        height: 38px !important;
+        font-size: 20px !important;
+        color: #ffffff !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 10px !important;
       }
 
       /* 橫式 1 題雙欄模式 */
       .print-container.landscape-mode {
         max-width: 282mm !important;
+      }
+      .print-container.landscape-mode .single-sheet-block {
+        page-break-after: always !important;
+        break-after: page !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      .print-container.landscape-mode .single-sheet-block:last-child {
+        page-break-after: auto !important;
+        break-after: auto !important;
+      }
+      .print-container.landscape-mode .title-badge {
+        color: #ffffff !important;
+        display: inline-block !important;
+        padding: 2px 10px !important;
+        border-radius: 8px !important;
+      }
+      .print-container.landscape-mode .target-badge {
+        width: 38px !important;
+        height: 38px !important;
+        font-size: 20px !important;
+        color: #ffffff !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 10px !important;
       }
       .print-container.landscape-mode #main-content-wrapper-0 {
         display: flex !important;
@@ -118,8 +163,6 @@
         border-top: 1px solid #334155 !important;
         border-left: 1px solid #334155 !important;
         color: #0f172a !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
       }
 
       .number-grid {
@@ -190,8 +233,11 @@
         <button onclick="clearColoring()" class="px-3 py-2 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-xl text-sm font-bold flex items-center gap-1 transition active:scale-95 touch-manipulation">
           🧹 清空塗色
         </button>
-        <button onclick="printWorksheet()" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold flex items-center gap-1 shadow-sm transition active:scale-95 touch-manipulation">
+        <button onclick="printWorksheet()" class="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold flex items-center gap-1 shadow-sm transition active:scale-95 touch-manipulation">
           🖨️ 列印/儲存為PDF
+        </button>
+        <button onclick="openBatchModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold flex items-center gap-1 shadow-sm transition active:scale-95 touch-manipulation">
+          📦 批次列印/PDF
         </button>
       </div>
     </div>
@@ -290,6 +336,68 @@
     </div>
   </div>
 
+  <!-- 📦 批次列印 / 下載 PDF 設定彈窗 -->
+  <div id="batch-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden no-print">
+    <div class="bg-white rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl border border-slate-100 text-left transform transition-all flex flex-col max-h-[90vh]">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-200 mb-4">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">📦</span>
+          <h3 class="text-xl font-bold text-slate-800">批次列印 / 儲存 PDF 設定</h3>
+        </div>
+        <button onclick="closeBatchModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold p-1">✕</button>
+      </div>
+
+      <!-- 當前設定預覽標籤 -->
+      <div class="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4 text-xs sm:text-sm font-semibold text-orange-900 flex flex-wrap justify-between gap-2">
+        <span>固定乘數：<strong id="batch-info-num" class="text-orange-600 font-bold">2 的乘法</strong></span>
+        <span>圖案種類：<strong id="batch-info-mode" class="text-orange-600 font-bold">大中小</strong></span>
+        <span>紙張排版：<strong id="batch-info-orient" class="text-orange-600 font-bold">直式 (20X20)</strong></span>
+      </div>
+
+      <div class="space-y-4 overflow-y-auto px-1 pr-2 mb-4">
+        <!-- 選擇張數 -->
+        <div>
+          <label class="block text-sm font-bold text-slate-700 mb-2">1. 選擇要產生的題目張數 (n 張)：</label>
+          <div class="flex flex-wrap gap-2 mb-2">
+            <button onclick="setBatchCount(2)" class="batch-count-btn px-3 py-1.5 rounded-lg border font-bold text-sm bg-slate-100 text-slate-700 hover:bg-slate-200" data-count="2">2 張</button>
+            <button onclick="setBatchCount(3)" class="batch-count-btn px-3 py-1.5 rounded-lg border font-bold text-sm bg-orange-500 text-white border-orange-500 shadow-sm" data-count="3">3 張</button>
+            <button onclick="setBatchCount(5)" class="batch-count-btn px-3 py-1.5 rounded-lg border font-bold text-sm bg-slate-100 text-slate-700 hover:bg-slate-200" data-count="5">5 張</button>
+            <button onclick="setBatchCount(10)" class="batch-count-btn px-3 py-1.5 rounded-lg border font-bold text-sm bg-slate-100 text-slate-700 hover:bg-slate-200" data-count="10">10 張</button>
+          </div>
+          <div class="flex items-center gap-2 mt-2">
+            <span class="text-xs font-bold text-slate-500">或自訂張數：</span>
+            <input type="number" id="batch-custom-count" min="1" max="20" value="3" oninput="onCustomCountChange(this.value)" class="w-20 px-2 py-1 border border-slate-300 rounded-lg text-sm font-bold text-slate-800 text-center outline-none focus:border-orange-500">
+            <span class="text-xs text-slate-500">(1~20張)</span>
+          </div>
+        </div>
+
+        <!-- 解答頁選項 -->
+        <div class="pt-2 border-t border-slate-100">
+          <label class="block text-sm font-bold text-slate-700 mb-2">2. 解答頁設定：</label>
+          <label class="flex items-center gap-2.5 cursor-pointer bg-slate-50 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 transition">
+            <input type="checkbox" id="batch-include-answers" checked class="w-4 h-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500">
+            <span class="text-sm font-bold text-slate-800">同時附上對應解答頁（解答將產生於題目頁後）</span>
+          </label>
+        </div>
+
+        <!-- 說明文字 -->
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-600 leading-relaxed">
+          💡 <strong>批次說明：</strong> 系統將在保持「乘數」與「圖案種類」不變的情況下，自動隨機產生 <span id="batch-summary-text" class="font-bold text-orange-600">3 張不同排列的題目單與 3 張解答單</span>。點擊後可直接列印或選擇「另存為 PDF」。
+        </div>
+      </div>
+
+      <!-- 操作按鈕 -->
+      <div class="flex gap-2 shrink-0 pt-2 border-t border-slate-100">
+        <button onclick="closeBatchModal()" class="w-1/3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition">
+          取消
+        </button>
+        <button onclick="executeBatchPrint()" class="w-2/3 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition shadow-md flex items-center justify-center gap-1">
+          🚀 產生並匯出 / 列印 PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // 全域狀態變數
     let currentNum = 2;
@@ -300,6 +408,7 @@
     let showAnswers = false;
     let isMouseDown = false;
     let gridMatrices = []; // 儲存題目的網格陣列
+    let selectedBatchCount = 3; // 預設批次張數
 
     // 七段顯示器 Segment 對照表
     const segs = {
@@ -1039,6 +1148,263 @@
 
     function closePrintModal() {
       document.getElementById('print-modal').classList.add('hidden');
+    }
+
+    // --- 📦 批次列印/下載 PDF 功能 ---
+    function openBatchModal() {
+      // 更新標籤文字
+      document.getElementById('batch-info-num').innerText = `${currentNum} 的乘法`;
+
+      const modeNames = {
+        lms: '大中小', lm: '大中', ls: '大小', ms: '中小', l: '大', m: '中', s: '小'
+      };
+      document.getElementById('batch-info-mode').innerText = modeNames[currentPatternMode] || currentPatternMode;
+      document.getElementById('batch-info-orient').innerText = currentOrientation === 'portrait' ? '直式 (20X20)' : '橫式 (20X14)';
+
+      setBatchCount(selectedBatchCount);
+      updateBatchSummary();
+      document.getElementById('batch-modal').classList.remove('hidden');
+    }
+
+    function closeBatchModal() {
+      document.getElementById('batch-modal').classList.add('hidden');
+    }
+
+    function setBatchCount(n) {
+      selectedBatchCount = Math.max(1, Math.min(20, n));
+      document.getElementById('batch-custom-count').value = selectedBatchCount;
+
+      const btns = document.querySelectorAll('.batch-count-btn');
+      btns.forEach(btn => {
+        const count = parseInt(btn.dataset.count);
+        if (count === selectedBatchCount) {
+          btn.className = 'batch-count-btn px-3 py-1.5 rounded-lg border font-bold text-sm bg-orange-500 text-white border-orange-500 shadow-sm';
+        } else {
+          btn.className = 'batch-count-btn px-3 py-1.5 rounded-lg border font-bold text-sm bg-slate-100 text-slate-700 hover:bg-slate-200';
+        }
+      });
+      updateBatchSummary();
+    }
+
+    function onCustomCountChange(val) {
+      let n = parseInt(val);
+      if (isNaN(n) || n < 1) n = 1;
+      if (n > 20) n = 20;
+      selectedBatchCount = n;
+
+      const btns = document.querySelectorAll('.batch-count-btn');
+      btns.forEach(btn => {
+        const count = parseInt(btn.dataset.count);
+        if (count === selectedBatchCount) {
+          btn.className = 'batch-count-btn px-3 py-1.5 rounded-lg border font-bold text-sm bg-orange-500 text-white border-orange-500 shadow-sm';
+        } else {
+          btn.className = 'batch-count-btn px-3 py-1.5 rounded-lg border font-bold text-sm bg-slate-100 text-slate-700 hover:bg-slate-200';
+        }
+      });
+      updateBatchSummary();
+    }
+
+    function updateBatchSummary() {
+      const includeAnswers = document.getElementById('batch-include-answers')?.checked;
+      const summaryEl = document.getElementById('batch-summary-text');
+      if (summaryEl) {
+        if (includeAnswers) {
+          summaryEl.innerText = `${selectedBatchCount} 張不同排列的題目單與 ${selectedBatchCount} 張對應解答頁（共 ${selectedBatchCount * 2} 頁 A4）`;
+        } else {
+          summaryEl.innerText = `${selectedBatchCount} 張不同排列的題目單（共 ${selectedBatchCount} 頁 A4）`;
+        }
+      }
+    }
+
+    document.addEventListener('change', (e) => {
+      if (e.target && e.target.id === 'batch-include-answers') {
+        updateBatchSummary();
+      }
+    });
+
+    // 執行批次產生並列印
+    function executeBatchPrint() {
+      const count = selectedBatchCount;
+      const includeAnswers = document.getElementById('batch-include-answers').checked;
+      closeBatchModal();
+
+      renderBatchWorksheetPages(count, includeAnswers);
+
+      setTimeout(() => {
+        printWorksheet();
+      }, 300);
+    }
+
+    // 批次產生指定張數題目與解答頁 DOM
+    function renderBatchWorksheetPages(count, includeAnswers) {
+      const container = document.getElementById('sheets-container');
+      container.innerHTML = '';
+
+      const numRows = currentOrientation === 'portrait' ? 20 : 14;
+      const numCols = 20;
+      gridMatrices = [];
+
+      // 產生 n 張題目的數據矩陣
+      for (let b = 0; b < count; b++) {
+        gridMatrices.push(generateSingleGridData(numRows, numCols));
+      }
+
+      let globalSheetIndex = 0;
+
+      // 1. 渲染全部題目頁 (Sheet 1..n)
+      for (let s = 0; s < count; s++) {
+        const sheetBlock = createSheetBlockElement(s, globalSheetIndex++, false);
+        container.appendChild(sheetBlock);
+        renderGridDOMForBatch(s, `number-grid-q-${s}`);
+      }
+
+      // 2. 若附帶解答頁，渲染解答頁 (Sheet 1..n 解答)
+      if (includeAnswers) {
+        for (let s = 0; s < count; s++) {
+          const sheetBlock = createSheetBlockElement(s, globalSheetIndex++, true);
+          container.appendChild(sheetBlock);
+          renderGridDOMForBatch(s, `number-grid-a-${s}`);
+          fillBatchAnswers(s);
+        }
+      }
+    }
+
+    // 建立單張學習單 DOM 區塊 (支援題目與解答模式)
+    function createSheetBlockElement(dataIndex, displayIndex, isAnswerPage) {
+      const sheetBlock = document.createElement('div');
+      sheetBlock.className = 'single-sheet-block flex flex-col gap-4';
+      sheetBlock.id = `sheet-block-batch-${displayIndex}`;
+
+      const gridId = isAnswerPage ? `number-grid-a-${dataIndex}` : `number-grid-q-${dataIndex}`;
+      const pageTitleBadge = isAnswerPage ? `【解答頁 第 ${dataIndex + 1} 份】` : (selectedBatchCount > 1 ? `【第 ${dataIndex + 1} 份】` : '');
+
+      sheetBlock.innerHTML = `
+        <div class="sheet-header flex justify-between items-end border-b-2 border-slate-900 pb-2 mb-2">
+          <div class="flex items-baseline gap-2">
+            <span class="title-badge text-xl sm:text-2xl font-black px-3 py-1 text-white rounded-lg shadow-sm" style="background-color: ${currentThemeColor};">乘法</span>
+            <h2 class="text-xl sm:text-2xl font-black tracking-wider text-slate-900">算算 ． 找找 ． 塗塗 <span class="text-sm font-bold text-slate-600">${pageTitleBadge}</span></h2>
+          </div>
+          <div class="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm font-black text-slate-900">
+            <div class="flex items-center">
+              <span class="inline-block border-b-2 border-slate-900 w-7 sm:w-9 h-4 sm:h-5 mx-0.5"></span>年<span class="inline-block border-b-2 border-slate-900 w-7 sm:w-9 h-4 sm:h-5 mx-0.5"></span>班
+            </div>
+            <div class="flex items-center">
+              姓名：<span class="inline-block border-b-2 border-slate-900 w-20 sm:w-24 h-4 sm:h-5"></span>
+            </div>
+            <div class="flex items-center">
+              得分：<span class="inline-block border-b-2 border-slate-900 w-12 sm:w-16 h-4 sm:h-5 text-center text-orange-600 font-bold">${isAnswerPage ? '100' : ''}</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="main-content-wrapper-batch-${displayIndex}" class="flex flex-col gap-4">
+          <div class="flex flex-col gap-3">
+            <div id="eq-container-batch-${displayIndex}" class="equation-container grid grid-cols-2 sm:grid-cols-5 gap-2.5"></div>
+            <div class="flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-300">
+              <div class="target-badge w-10 h-10 rounded-xl text-white font-black text-2xl flex items-center justify-center shadow-inner shrink-0" style="background-color: ${currentThemeColor};">
+                ${currentNum}
+              </div>
+              <div class="text-sm sm:text-base font-bold text-slate-800">
+                請將「<span class="font-extrabold text-lg" style="color: ${currentThemeColor};">${currentNum} 的乘法</span>」答案的方格塗上顏色
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-center w-full">
+            <div id="${gridId}" class="number-grid w-full bg-white rounded-none shadow-sm touch-none select-none"></div>
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-slate-300 text-center text-[10px] sm:text-xs text-slate-500 flex justify-between items-center font-medium">
+          <span>國小數學領域 數位自主學習單</span>
+          <span>設計：閒雲小築-數學小棧</span>
+        </div>
+      `;
+
+      // 填充 10 個乘法算式
+      setTimeout(() => {
+        const eqContainer = sheetBlock.querySelector(`#eq-container-batch-${displayIndex}`);
+        if (eqContainer) {
+          for (let i = 1; i <= 10; i++) {
+            const ans = currentNum * i;
+            const eqBox = document.createElement('div');
+            eqBox.className = 'equation-box flex items-center justify-center gap-2 border-2 border-slate-600 rounded-xl p-3 bg-white font-mono font-black text-xl sm:text-2xl shadow-sm';
+            eqBox.innerHTML = `
+              <span class="text-slate-900">${currentNum}×${i}=</span>
+              <input type="text" id="eq-input-b-${displayIndex}-${i}" data-ans="${ans}" value="${isAnswerPage ? ans : ''}" ${isAnswerPage ? `style="color:${currentThemeColor}; font-weight:900;"` : ''} class="w-14 sm:w-16 text-center font-black text-slate-900 outline-none border-b-2 sm:border-b-3 border-slate-900 focus:border-orange-500 transition" placeholder="">
+            `;
+            eqContainer.appendChild(eqBox);
+          }
+        }
+      }, 0);
+
+      return sheetBlock;
+    }
+
+    // 渲染指定 ID 的批次網格 DOM
+    function renderGridDOMForBatch(dataIndex, gridContainerId) {
+      setTimeout(() => {
+        const gridEl = document.getElementById(gridContainerId);
+        if (!gridEl || !gridMatrices[dataIndex]) return;
+        gridEl.innerHTML = '';
+
+        const matrix = gridMatrices[dataIndex];
+        const numRows = matrix.length;
+        const numCols = matrix[0].length;
+
+        for (let r = 0; r < numRows; r++) {
+          for (let c = 0; c < numCols; c++) {
+            const cellData = matrix[r][c];
+            const cell = document.createElement('div');
+            cell.id = `cell-batch-${gridContainerId}-${r}-${c}`;
+            cell.className = 'grid-cell w-full aspect-square bg-white flex items-center justify-center font-extrabold text-xs sm:text-sm md:text-base text-slate-900 border-t border-l border-slate-700 cursor-pointer transition-all duration-75 select-none active:scale-95';
+            cell.innerText = cellData.val;
+
+            cell.onpointerdown = (e) => {
+              e.preventDefault();
+              applyBatchPaint(gridContainerId, cell, cellData, touchTool === 'paint');
+            };
+
+            gridEl.appendChild(cell);
+          }
+        }
+      }, 10);
+    }
+
+    function applyBatchPaint(gridContainerId, cellEl, cellData, paint) {
+      cellData.painted = paint;
+      if (cellEl) {
+        if (paint) {
+          cellEl.style.backgroundColor = currentThemeColor;
+          cellEl.style.color = '#ffffff';
+          cellEl.style.borderColor = currentThemeColor;
+        } else {
+          cellEl.style.backgroundColor = '#ffffff';
+          cellEl.style.color = '#0f172a';
+          cellEl.style.borderColor = '#334155';
+        }
+      }
+    }
+
+    // 將指定數據索引的解答填入對應解答頁 DOM 網格
+    function fillBatchAnswers(dataIndex) {
+      setTimeout(() => {
+        const matrix = gridMatrices[dataIndex];
+        if (!matrix) return;
+        const gridContainerId = `number-grid-a-${dataIndex}`;
+        for (let r = 0; r < matrix.length; r++) {
+          for (let c = 0; c < matrix[r].length; c++) {
+            if (matrix[r][c].isTarget) {
+              const cellEl = document.getElementById(`cell-batch-${gridContainerId}-${r}-${c}`);
+              if (cellEl) {
+                cellEl.style.backgroundColor = currentThemeColor;
+                cellEl.style.color = '#ffffff';
+                cellEl.style.borderColor = currentThemeColor;
+              }
+            }
+          }
+        }
+      }, 50);
     }
   </script>
 </body>
