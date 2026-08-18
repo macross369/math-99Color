@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>乘法算算．找找．塗塗 學習單產生器</title>
+  <title>乘法計算／查找／上色 學習單產生器</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style id="page-style">
@@ -177,7 +177,7 @@
       }
     }
 
-    /* 20 欄數字網格矩陣 (極致向量線條與滿版配置) */
+    /* 20 欄數字網格矩陣 */
     .number-grid {
       display: grid;
       grid-template-columns: repeat(20, minmax(0, 1fr));
@@ -214,7 +214,7 @@
       <div class="flex items-center gap-3">
         <span class="text-3xl">🎨</span>
         <div>
-          <h1 class="text-xl font-bold text-slate-800">乘法｜算算．找找．塗塗 產生器</h1>
+          <h1 class="text-xl font-bold text-slate-800">九九乘法：計算／查找／上色 產生器</h1>
           <p class="text-xs text-slate-500">專為國小九九乘法設計的互動學習單工具（支援平板與大螢幕觸控）</p>
         </div>
       </div>
@@ -233,7 +233,7 @@
         <button onclick="clearColoring()" class="px-3 py-2 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-xl text-sm font-bold flex items-center gap-1 transition active:scale-95 touch-manipulation">
           🧹 清空塗色
         </button>
-        <button onclick="printWorksheet()" class="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold flex items-center gap-1 shadow-sm transition active:scale-95 touch-manipulation">
+        <button onclick="openSinglePrintModal()" class="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold flex items-center gap-1 shadow-sm transition active:scale-95 touch-manipulation">
           🖨️ 列印/儲存為PDF
         </button>
         <button onclick="openBatchModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold flex items-center gap-1 shadow-sm transition active:scale-95 touch-manipulation">
@@ -336,6 +336,49 @@
     </div>
   </div>
 
+  <!-- 🖨️ 單張列印 / 儲存 PDF 設定彈窗 -->
+  <div id="single-print-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden no-print">
+    <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl border border-slate-100 text-left transform transition-all flex flex-col">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-200 mb-4">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🖨️</span>
+          <h3 class="text-xl font-bold text-slate-800">列印 / 儲存 PDF 設定</h3>
+        </div>
+        <button onclick="closeSinglePrintModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold p-1">✕</button>
+      </div>
+
+      <div class="space-y-4 mb-6">
+        <!-- 勾選是否附解答 -->
+        <label class="flex items-center gap-3 cursor-pointer bg-slate-50 p-3 rounded-xl border border-slate-200 hover:bg-slate-100 transition">
+          <input type="checkbox" id="single-include-answer" checked class="w-5 h-5 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500">
+          <div>
+            <div class="text-sm font-bold text-slate-800">同時附上解答頁</div>
+            <div class="text-xs text-slate-500">於題目頁後自動附加 1 頁彩色的完整解答卷</div>
+          </div>
+        </label>
+
+        <!-- 勾選是否印出製作日期及版本 -->
+        <label class="flex items-center gap-3 cursor-pointer bg-slate-50 p-3 rounded-xl border border-slate-200 hover:bg-slate-100 transition">
+          <input type="checkbox" id="single-include-version" checked class="w-5 h-5 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500">
+          <div>
+            <div class="text-sm font-bold text-slate-800">印出「製作日期及版本」</div>
+            <div class="text-xs text-slate-500">頁尾顯示如 <span class="font-mono bg-slate-200 text-orange-600 px-1 py-0.5 rounded font-bold" id="version-preview-tag">[2026/08/19-第1版]</span></div>
+          </div>
+        </label>
+      </div>
+
+      <!-- 操作按鈕 -->
+      <div class="flex gap-2 shrink-0 pt-2 border-t border-slate-100">
+        <button onclick="closeSinglePrintModal()" class="w-1/3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition">
+          取消
+        </button>
+        <button onclick="executeSinglePrint()" class="w-2/3 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold transition shadow-md flex items-center justify-center gap-1">
+          🖨️ 開始列印 / 儲存 PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- 📦 批次列印 / 下載 PDF 設定彈窗 -->
   <div id="batch-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden no-print">
     <div class="bg-white rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl border border-slate-100 text-left transform transition-all flex flex-col max-h-[90vh]">
@@ -371,12 +414,18 @@
           </div>
         </div>
 
-        <!-- 解答頁選項 -->
-        <div class="pt-2 border-t border-slate-100">
-          <label class="block text-sm font-bold text-slate-700 mb-2">2. 解答頁設定：</label>
+        <!-- 頁面列印選項 -->
+        <div class="pt-2 border-t border-slate-100 space-y-2.5">
+          <label class="block text-sm font-bold text-slate-700">2. 列印選項設定：</label>
+          
           <label class="flex items-center gap-2.5 cursor-pointer bg-slate-50 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 transition">
             <input type="checkbox" id="batch-include-answers" checked class="w-4 h-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500">
             <span class="text-sm font-bold text-slate-800">同時附上對應解答頁（解答將產生於題目頁後）</span>
+          </label>
+
+          <label class="flex items-center gap-2.5 cursor-pointer bg-slate-50 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 transition">
+            <input type="checkbox" id="batch-include-version" checked class="w-4 h-4 text-orange-500 rounded border-slate-300 focus:ring-orange-500 accent-orange-500">
+            <span class="text-sm font-bold text-slate-800">印出「製作日期及版本」（例如：<span id="batch-version-sample" class="font-mono text-orange-600 font-bold">[2026/08/19-第1版]</span>）</span>
           </label>
         </div>
 
@@ -798,7 +847,7 @@
     }
 
     // 繪製整張學習單
-    function renderWorksheet() {
+    function renderWorksheet(includeVersionTag = true, versionCustomText = null) {
       const container = document.getElementById('sheets-container');
       container.innerHTML = '';
 
@@ -821,11 +870,15 @@
         sheetBlock.id = `sheet-block-${s}`;
 
         // 頁眉學生資訊欄
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
+        const versionLabelText = versionCustomText !== null ? versionCustomText : (includeVersionTag ? `[${dateStr}-第${s + 1}版]` : '');
+
         sheetBlock.innerHTML = `
           <div class="sheet-header flex justify-between items-end border-b-2 border-slate-900 pb-2 mb-2">
             <div class="flex items-baseline gap-2">
               <span class="title-badge text-xl sm:text-2xl font-black px-3 py-1 text-white rounded-lg shadow-sm" style="background-color: ${currentThemeColor};">乘法</span>
-              <h2 class="text-xl sm:text-2xl font-black tracking-wider text-slate-900">算算 ． 找找 ． 塗塗</h2>
+              <h2 class="text-xl sm:text-2xl font-black tracking-wider text-slate-900">計算 ／ 查找 ／ 上色</h2>
             </div>
             <div class="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm font-black text-slate-900">
               <div class="flex items-center">
@@ -860,6 +913,7 @@
 
           <div class="pt-2 border-t border-slate-300 text-center text-[10px] sm:text-xs text-slate-500 flex justify-between items-center font-medium">
             <span>國小數學領域 數位自主學習單</span>
+            <span class="font-bold text-slate-600">${versionLabelText}</span>
             <span>設計：閒雲小築-數學小棧</span>
           </div>
         `;
@@ -1138,6 +1192,56 @@
       document.getElementById('result-modal').classList.add('hidden');
     }
 
+    // --- 🖨️ 單張列印 / 儲存 PDF 功能視窗 ---
+    function openSinglePrintModal() {
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
+      const previewTag = document.getElementById('version-preview-tag');
+      if (previewTag) previewTag.innerText = `[${dateStr}-第1版]`;
+
+      document.getElementById('single-print-modal').classList.remove('hidden');
+    }
+
+    function closeSinglePrintModal() {
+      document.getElementById('single-print-modal').classList.add('hidden');
+    }
+
+    // 執行單張 / 帶解答列印
+    function executeSinglePrint() {
+      const includeAnswer = document.getElementById('single-include-answer').checked;
+      const includeVersion = document.getElementById('single-include-version').checked;
+      closeSinglePrintModal();
+
+      renderSinglePrintPages(includeAnswer, includeVersion);
+
+      setTimeout(() => {
+        printWorksheet();
+      }, 300);
+    }
+
+    // 渲染單張列印頁面（題目 + 選填解答頁）
+    function renderSinglePrintPages(includeAnswer, includeVersion) {
+      const container = document.getElementById('sheets-container');
+      container.innerHTML = '';
+
+      const numRows = currentOrientation === 'portrait' ? 20 : 14;
+      const numCols = 20;
+      gridMatrices = [generateSingleGridData(numRows, numCols)];
+
+      // 1. 渲染題目頁
+      const qBlock = createSheetBlockElement(0, 0, false, includeVersion);
+      container.appendChild(qBlock);
+      renderGridDOMForBatch(0, `number-grid-single-q`);
+
+      // 2. 若附解答，渲染解答頁
+      if (includeAnswer) {
+        const aBlock = createSheetBlockElement(0, 1, true, includeVersion);
+        container.appendChild(aBlock);
+        renderGridDOMForBatch(0, `number-grid-single-a`);
+        fillBatchAnswers(0);
+      }
+    }
+
     function printWorksheet() {
       try {
         window.print();
@@ -1160,6 +1264,11 @@
       };
       document.getElementById('batch-info-mode').innerText = modeNames[currentPatternMode] || currentPatternMode;
       document.getElementById('batch-info-orient').innerText = currentOrientation === 'portrait' ? '直式 (20X20)' : '橫式 (20X14)';
+
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
+      const versionSample = document.getElementById('batch-version-sample');
+      if (versionSample) versionSample.innerText = `[${dateStr}-第1版]`;
 
       setBatchCount(selectedBatchCount);
       updateBatchSummary();
@@ -1217,7 +1326,7 @@
     }
 
     document.addEventListener('change', (e) => {
-      if (e.target && e.target.id === 'batch-include-answers') {
+      if (e.target && (e.target.id === 'batch-include-answers' || e.target.id === 'batch-include-version')) {
         updateBatchSummary();
       }
     });
@@ -1226,9 +1335,10 @@
     function executeBatchPrint() {
       const count = selectedBatchCount;
       const includeAnswers = document.getElementById('batch-include-answers').checked;
+      const includeVersion = document.getElementById('batch-include-version').checked;
       closeBatchModal();
 
-      renderBatchWorksheetPages(count, includeAnswers);
+      renderBatchWorksheetPages(count, includeAnswers, includeVersion);
 
       setTimeout(() => {
         printWorksheet();
@@ -1236,7 +1346,7 @@
     }
 
     // 批次產生指定張數題目與解答頁 DOM
-    function renderBatchWorksheetPages(count, includeAnswers) {
+    function renderBatchWorksheetPages(count, includeAnswers, includeVersion) {
       const container = document.getElementById('sheets-container');
       container.innerHTML = '';
 
@@ -1253,7 +1363,7 @@
 
       // 1. 渲染全部題目頁 (Sheet 1..n)
       for (let s = 0; s < count; s++) {
-        const sheetBlock = createSheetBlockElement(s, globalSheetIndex++, false);
+        const sheetBlock = createSheetBlockElement(s, globalSheetIndex++, false, includeVersion);
         container.appendChild(sheetBlock);
         renderGridDOMForBatch(s, `number-grid-q-${s}`);
       }
@@ -1261,7 +1371,7 @@
       // 2. 若附帶解答頁，渲染解答頁 (Sheet 1..n 解答)
       if (includeAnswers) {
         for (let s = 0; s < count; s++) {
-          const sheetBlock = createSheetBlockElement(s, globalSheetIndex++, true);
+          const sheetBlock = createSheetBlockElement(s, globalSheetIndex++, true, includeVersion);
           container.appendChild(sheetBlock);
           renderGridDOMForBatch(s, `number-grid-a-${s}`);
           fillBatchAnswers(s);
@@ -1269,20 +1379,26 @@
       }
     }
 
-    // 建立單張學習單 DOM 區塊 (支援題目與解答模式)
-    function createSheetBlockElement(dataIndex, displayIndex, isAnswerPage) {
+    // 建立單張學習單 DOM 區塊 (支援題目與解答模式，及版本標籤開關)
+    function createSheetBlockElement(dataIndex, displayIndex, isAnswerPage, includeVersion = true) {
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
+      const versionLabel = includeVersion ? `[${dateStr}-第${dataIndex + 1}版${isAnswerPage ? '解答' : ''}]` : '';
+
       const sheetBlock = document.createElement('div');
       sheetBlock.className = 'single-sheet-block flex flex-col gap-4';
       sheetBlock.id = `sheet-block-batch-${displayIndex}`;
 
-      const gridId = isAnswerPage ? `number-grid-a-${dataIndex}` : `number-grid-q-${dataIndex}`;
-      const pageTitleBadge = isAnswerPage ? `【解答頁 第 ${dataIndex + 1} 份】` : (selectedBatchCount > 1 ? `【第 ${dataIndex + 1} 份】` : '');
+      let gridId = `number-grid-b-${displayIndex}`;
+      if (displayIndex === 0 && !isAnswerPage) gridId = 'number-grid-single-q';
+      else if (displayIndex === 1 && isAnswerPage) gridId = 'number-grid-single-a';
+      else gridId = isAnswerPage ? `number-grid-a-${dataIndex}` : `number-grid-q-${dataIndex}`;
 
       sheetBlock.innerHTML = `
         <div class="sheet-header flex justify-between items-end border-b-2 border-slate-900 pb-2 mb-2">
           <div class="flex items-baseline gap-2">
             <span class="title-badge text-xl sm:text-2xl font-black px-3 py-1 text-white rounded-lg shadow-sm" style="background-color: ${currentThemeColor};">乘法</span>
-            <h2 class="text-xl sm:text-2xl font-black tracking-wider text-slate-900">算算 ． 找找 ． 塗塗 <span class="text-sm font-bold text-slate-600">${pageTitleBadge}</span></h2>
+            <h2 class="text-xl sm:text-2xl font-black tracking-wider text-slate-900">計算 ／ 查找 ／ 上色</h2>
           </div>
           <div class="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm font-black text-slate-900">
             <div class="flex items-center">
@@ -1317,6 +1433,7 @@
 
         <div class="pt-2 border-t border-slate-300 text-center text-[10px] sm:text-xs text-slate-500 flex justify-between items-center font-medium">
           <span>國小數學領域 數位自主學習單</span>
+          <span class="font-bold text-slate-600">${versionLabel}</span>
           <span>設計：閒雲小築-數學小棧</span>
         </div>
       `;
@@ -1391,7 +1508,13 @@
       setTimeout(() => {
         const matrix = gridMatrices[dataIndex];
         if (!matrix) return;
-        const gridContainerId = `number-grid-a-${dataIndex}`;
+        
+        // 尋找對應解答網格 ID
+        let gridContainerId = `number-grid-a-${dataIndex}`;
+        if (!document.getElementById(gridContainerId)) {
+          gridContainerId = 'number-grid-single-a';
+        }
+
         for (let r = 0; r < matrix.length; r++) {
           for (let c = 0; c < matrix[r].length; c++) {
             if (matrix[r][c].isTarget) {
