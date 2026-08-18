@@ -1,644 +1,1045 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>乘法算算・找找・塗塗 學習單產生器</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
-    <style>
-        * {
-            box-sizing: border-box;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
-        body {
-            font-family: 'Noto Sans TC', sans-serif;
-            background-color: #f8fafc;
-            color: #0f172a;
-            text-rendering: optimizeLegibility;
-            -webkit-font-smoothing: antialiased;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>乘法算算．找找．塗塗 學習單產生器</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style id="page-style">
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+    
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
 
-        /* 20x14 題目網格 (佔 90% A4 寬度，統一細灰色實線邊框) */
-        .number-grid {
-            width: 90% !important;
-            margin-left: auto !important;
-            margin-right: auto !important;
-            display: grid;
-            grid-template-columns: repeat(20, minmax(0, 1fr));
-            grid-template-rows: repeat(14, minmax(0, 1fr));
-            aspect-ratio: 20 / 14;
-            background-color: #ffffff;
-            border-top: 1px solid #94a3b8;
-            border-left: 1px solid #94a3b8;
-            border-radius: 2px;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
+    /* 動態 A4 紙張列印設定 */
+    @page {
+      size: A4 portrait;
+      margin: 4mm 5mm;
+    }
 
-        .grid-cell {
-            border-right: 1px solid #94a3b8;
-            border-bottom: 1px solid #94a3b8;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-            margin: 0;
-            user-select: none;
-            overflow: hidden;
-            background-color: #ffffff;
-            transition: background-color 0.15s ease;
-        }
+    /* 列印專用樣式優化 */
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      body {
+        background-color: white !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        color: #0f172a !important;
+      }
+      .print-container {
+        box-shadow: none !important;
+        border: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
 
-        /* 方格內數字放大，自動充飽方格但不超出 */
-        .grid-cell span {
-            font-weight: 800;
-            font-size: clamp(14px, 1.8vw, 24px);
-            line-height: 1;
-            color: #1e293b;
-            pointer-events: none;
-            transform: translateY(0.5px);
-        }
+      /* 直式 1 題模式 (A4 單頁 20x20 網格，佔寬 95%) */
+      .print-container.portrait-mode {
+        max-width: 198mm !important;
+        margin: 0 auto !important;
+      }
+      .print-container.portrait-mode .single-sheet-block {
+        padding: 1mm 0 !important;
+        margin-bottom: 0 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      .print-container.portrait-mode .sheet-header {
+        margin-bottom: 3mm !important;
+        padding-bottom: 1.5mm !important;
+        border-bottom: 2px solid #0f172a !important;
+      }
+      .print-container.portrait-mode .equation-box {
+        padding: 6px 10px !important;
+        font-size: 20px !important;
+        border: 2px solid #334155 !important;
+        justify-content: center !important;
+      }
+      .print-container.portrait-mode .equation-box input {
+        width: 52px !important;
+        height: 28px !important;
+        font-size: 20px !important;
+        border-bottom: 2px solid #0f172a !important;
+      }
+      .print-container.portrait-mode .grid-cell {
+        width: 100% !important;
+        height: 100% !important;
+        aspect-ratio: 1 / 1 !important;
+        font-size: 11.5px !important;
+        font-weight: 800 !important;
+        line-height: 1 !important;
+        border-top: 1px solid #334155 !important;
+        border-left: 1px solid #334155 !important;
+        color: #0f172a !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .print-container.portrait-mode .target-badge {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 18px !important;
+      }
 
-        /* 列印優化與精準尺寸控制 */
-        @media print {
-            @page {
-                size: A4 portrait;
-                margin: 5mm 8mm; /* 控制 A4 上下安全留白 */
-            }
-            body {
-                background: #ffffff !important;
-                padding-bottom: 0 !important;
-            }
-            .no-print {
-                display: none !important;
-            }
-            .print-sheet {
-                page-break-inside: avoid;
-                break-inside: avoid;
-                margin-bottom: 0 !important;
-            }
-            .number-grid {
-                width: 90% !important;
-                border-top: 1px solid #64748b !important;
-                border-left: 1px solid #64748b !important;
-                box-shadow: none !important;
-            }
-            .grid-cell {
-                border-right: 1px solid #64748b !important;
-                border-bottom: 1px solid #64748b !important;
-            }
-            .grid-cell span {
-                font-size: 14pt !important; /* A4 列印時最佳清晰放大尺寸 */
-                font-weight: 800 !important;
-                color: #0f172a !important;
-            }
-            .print-black-text {
-                color: #0f172a !important;
-            }
-        }
-    </style>
+      /* 橫式 1 題雙欄模式 */
+      .print-container.landscape-mode {
+        max-width: 282mm !important;
+      }
+      .print-container.landscape-mode #main-content-wrapper-0 {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 1.5rem !important;
+      }
+      .print-container.landscape-mode #left-section-0 {
+        width: 38% !important;
+      }
+      .print-container.landscape-mode #right-section-0 {
+        width: 60% !important;
+      }
+      .print-container.landscape-mode .equation-container {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 0.35rem !important;
+      }
+      .print-container.landscape-mode .grid-cell {
+        width: 100% !important;
+        height: 100% !important;
+        aspect-ratio: 1 / 1 !important;
+        font-size: 12px !important;
+        font-weight: 800 !important;
+        border-top: 1px solid #334155 !important;
+        border-left: 1px solid #334155 !important;
+        color: #0f172a !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      .number-grid {
+        display: grid !important;
+        grid-template-columns: repeat(20, minmax(0, 1fr)) !important;
+        gap: 0 !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+        border-right: 1px solid #334155 !important;
+        border-bottom: 1px solid #334155 !important;
+        box-sizing: border-box !important;
+      }
+    }
+
+    /* 20 欄數字網格矩陣 (極致向量線條與滿版配置) */
+    .number-grid {
+      display: grid;
+      grid-template-columns: repeat(20, minmax(0, 1fr));
+      gap: 0;
+      width: 100%;
+      border-right: 1px solid #334155;
+      border-bottom: 1px solid #334155;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      box-sizing: border-box;
+    }
+
+    .grid-cell {
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      box-sizing: border-box;
+    }
+  </style>
 </head>
-<body class="min-h-screen pb-12">
+<body class="bg-slate-100 min-h-screen text-slate-800 p-2 sm:p-6">
 
-    <!-- 頂部控制面板 (列印時自動隱藏) -->
-    <div class="no-print bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-200 sticky top-0 z-50">
-        <div class="max-w-5xl mx-auto px-4 py-3" id="control-container">
-            <!-- 標題與功能按鈕 -->
-            <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center space-x-2">
-                    <img src="https://lh3.googleusercontent.com/d/1qUdM3yxfDP9U8S1PAlYScLXLG9riPxMt" alt="Logo" class="h-8 w-8 object-contain rounded-full bg-slate-100 p-0.5 border border-slate-200" onerror="this.src='https://placehold.co/40x40/ffffff/333333?text=Logo'">
-                    <h1 class="text-xl font-black text-slate-800 tracking-tight">乘法｜算算・找找・塗塗</h1>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <button onclick="generateGrid()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition flex items-center">
-                        <span class="mr-1">🎲</span> 重新打散
-                    </button>
-                    <button onclick="toggleAnswer()" class="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg text-sm font-bold transition flex items-center">
-                        <span class="mr-1">👁️</span> 顯示解答
-                    </button>
-                    <button onclick="verifyAnswer()" class="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg text-sm font-bold transition flex items-center">
-                        <span class="mr-1">✅</span> 驗算答案
-                    </button>
-                    <button onclick="clearDraw()" class="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg text-sm font-bold transition flex items-center">
-                        <span class="mr-1">🧹</span> 清空塗色
-                    </button>
-                    <button onclick="window.print()" class="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-black shadow-md hover:shadow transition flex items-center">
-                        <span class="mr-1">🖨️</span> 列印 / PDF
-                    </button>
-                </div>
-            </div>
+  <!-- 閒雲數學小棧 頂部 Logo 標籤區 -->
+  <div id="top-brand" class="no-print w-full max-w-4xl mx-auto flex items-center justify-start mb-4 px-2 fade-in">
+    <img src="https://lh3.googleusercontent.com/d/1qUdM3yxfDP9U8S1PAlYScLXLG9riPxMt" alt="閒雲數學小棧Logo" class="h-8 w-auto mr-3 object-contain drop-shadow-md rounded-full bg-white/30 p-1" onerror="this.src='https://placehold.co/40x40/ffffff/333333?text=Logo'">
+    <span class="text-xl md:text-2xl font-bold text-slate-800 drop-shadow-lg tracking-wider" style="text-shadow: 1px 1px 3px rgba(0,0,0,0.2);">閒雲數學小棧</span>
+  </div>
 
-            <!-- 控制選項列 (乘數、圖案、排版、工具、顏色) -->
-            <div class="space-y-2 text-sm">
-                <!-- 第一列：乘數與圖案 -->
-                <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200/60">
-                    <div class="flex items-center whitespace-nowrap">
-                        <span class="font-bold text-slate-600 mr-2">選擇乘數：</span>
-                        <div class="flex space-x-1" id="multiplier-btns"></div>
-                    </div>
-                    <div class="flex items-center whitespace-nowrap">
-                        <span class="font-bold text-slate-600 mr-2">圖案種類：</span>
-                        <div class="flex bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden" id="pattern-btns">
-                            <button onclick="setPattern('lms')" class="px-3 py-1 text-xs font-bold bg-orange-500 text-white">大中小</button>
-                            <button onclick="setPattern('lm')" class="px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100">大中</button>
-                            <button onclick="setPattern('ls')" class="px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100">大小</button>
-                            <button onclick="setPattern('ms')" class="px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100">中小</button>
-                            <button onclick="setPattern('l')" class="px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100">大</button>
-                            <button onclick="setPattern('m')" class="px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100">中</button>
-                            <button onclick="setPattern('s')" class="px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100">小</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 第二列：排版、工具、色彩三欄並排 -->
-                <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200/60">
-                    <div class="flex items-center whitespace-nowrap">
-                        <span class="font-bold text-slate-600 mr-2">紙張排版：</span>
-                        <div class="flex bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-                            <button id="layout-portrait" onclick="setLayoutMode('portrait-2')" class="px-3 py-1 text-xs font-bold bg-orange-500 text-white">📄 直式 (2題)</button>
-                            <button id="layout-landscape" onclick="setLayoutMode('landscape-1')" class="px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100">🖼️ 橫式 (1題)</button>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-center whitespace-nowrap">
-                        <span class="font-bold text-slate-600 mr-2">觸控工具：</span>
-                        <div class="flex bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-                            <button id="tool-pen" onclick="setTool('pen')" class="px-3 py-1 text-xs font-bold bg-orange-500 text-white">🖌️ 塗色模式</button>
-                            <button id="tool-eraser" onclick="setTool('eraser')" class="px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100">🧼 橡皮擦</button>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center whitespace-nowrap">
-                        <span class="font-bold text-slate-600 mr-2">主題色彩：</span>
-                        <div class="flex space-x-2" id="color-btns">
-                            <button onclick="setColor('orange')" class="w-5 h-5 rounded-full bg-orange-500 ring-2 ring-offset-1 ring-orange-500"></button>
-                            <button onclick="setColor('blue')" class="w-5 h-5 rounded-full bg-blue-500 hover:ring-2 ring-offset-1 ring-blue-500"></button>
-                            <button onclick="setColor('green')" class="w-5 h-5 rounded-full bg-emerald-500 hover:ring-2 ring-offset-1 ring-emerald-500"></button>
-                            <button onclick="setColor('purple')" class="w-5 h-5 rounded-full bg-purple-500 hover:ring-2 ring-offset-1 ring-purple-500"></button>
-                            <button onclick="setColor('pink')" class="w-5 h-5 rounded-full bg-pink-500 hover:ring-2 ring-offset-1 ring-pink-500"></button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <!-- 上方控制列 -->
+  <header id="control-header" class="no-print max-w-4xl mx-auto bg-white rounded-2xl shadow-md p-4 mb-6 border border-slate-200 transition-all duration-300">
+    <div class="flex flex-wrap justify-between items-center gap-4 mb-3 pb-3 border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <span class="text-3xl">🎨</span>
+        <div>
+          <h1 class="text-xl font-bold text-slate-800">乘法｜算算．找找．塗塗 產生器</h1>
+          <p class="text-xs text-slate-500">專為國小九九乘法設計的互動學習單工具（支援平板與大螢幕觸控）</p>
         </div>
+      </div>
+
+      <!-- 操作按鈕區 -->
+      <div class="flex flex-wrap gap-2">
+        <button onclick="regenerateNumbers()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold flex items-center gap-1 transition active:scale-95 touch-manipulation">
+          🎲 重新打散數字
+        </button>
+        <button onclick="toggleAnswerKey()" id="btn-answer" class="px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-xl text-sm font-bold flex items-center gap-1 transition active:scale-95 touch-manipulation">
+          👁️ 顯示解答
+        </button>
+        <button onclick="checkAnswers()" class="px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-xl text-sm font-bold flex items-center gap-1 transition active:scale-95 touch-manipulation">
+          ✅ 驗算答案
+        </button>
+        <button onclick="clearColoring()" class="px-3 py-2 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-xl text-sm font-bold flex items-center gap-1 transition active:scale-95 touch-manipulation">
+          🧹 清空塗色
+        </button>
+        <button onclick="printWorksheet()" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold flex items-center gap-1 shadow-sm transition active:scale-95 touch-manipulation">
+          🖨️ 列印/儲存為PDF
+        </button>
+      </div>
     </div>
 
-    <!-- 學習單主容器 -->
-    <main id="worksheet-main" class="max-w-4xl mx-auto mt-4 bg-white shadow-xl rounded-xl p-6 print:shadow-none print:p-0 print:m-0 print:max-w-none transition-all">
-        <div id="worksheet-content" class="w-full"></div>
-    </main>
-
-    <!-- 驗算結果彈窗 -->
-    <div id="result-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center z-[100] no-print">
-        <div id="result-modal-content" class="bg-white rounded-2xl p-6 max-w-2xl w-full mx-4 shadow-2xl transform transition-transform scale-95 opacity-0">
-            <!-- 動態填入評分內容 -->
+    <!-- 寬敞對齊控制選項區 -->
+    <div class="flex flex-wrap items-center justify-between gap-x-12 sm:gap-x-16 gap-y-3.5 mb-2">
+      <!-- 選擇乘數 -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs sm:text-sm font-bold text-slate-600 shrink-0">選擇乘數：</span>
+        <div class="flex flex-wrap gap-1" id="num-selector">
+          <!-- JS 動態生成 2~9 按鈕 -->
         </div>
+      </div>
+
+      <!-- 圖案種類選擇 (7 種模式) -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs sm:text-sm font-bold text-slate-600 shrink-0">圖案種類：</span>
+        <div class="inline-flex flex-wrap rounded-xl p-0.5 bg-slate-100 border border-slate-200 gap-0.5" id="mode-selector">
+          <button onclick="selectPatternMode('lms')" id="mode-btn-lms" class="px-2 py-1 rounded-lg font-bold text-xs transition bg-orange-500 text-white shadow-sm touch-manipulation">大中小</button>
+          <button onclick="selectPatternMode('lm')" id="mode-btn-lm" class="px-2 py-1 rounded-lg font-bold text-xs transition text-slate-600 hover:text-slate-900 touch-manipulation">大中</button>
+          <button onclick="selectPatternMode('ls')" id="mode-btn-ls" class="px-2 py-1 rounded-lg font-bold text-xs transition text-slate-600 hover:text-slate-900 touch-manipulation">大小</button>
+          <button onclick="selectPatternMode('ms')" id="mode-btn-ms" class="px-2 py-1 rounded-lg font-bold text-xs transition text-slate-600 hover:text-slate-900 touch-manipulation">中小</button>
+          <button onclick="selectPatternMode('l')" id="mode-btn-l" class="px-2 py-1 rounded-lg font-bold text-xs transition text-slate-600 hover:text-slate-900 touch-manipulation">大</button>
+          <button onclick="selectPatternMode('m')" id="mode-btn-m" class="px-2 py-1 rounded-lg font-bold text-xs transition text-slate-600 hover:text-slate-900 touch-manipulation">中</button>
+          <button onclick="selectPatternMode('s')" id="mode-btn-s" class="px-2 py-1 rounded-lg font-bold text-xs transition text-slate-600 hover:text-slate-900 touch-manipulation">小</button>
+        </div>
+      </div>
     </div>
+    
+    <div class="flex flex-wrap items-center justify-between gap-x-4 sm:gap-x-6 gap-y-3.5">
+      <!-- 紙張方向選擇 -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs sm:text-sm font-bold text-slate-600 shrink-0">紙張排版：</span>
+        <div class="inline-flex rounded-xl p-0.5 bg-slate-100 border border-slate-200" id="orientation-selector">
+          <button onclick="selectOrientation('portrait')" id="orient-btn-portrait" class="px-2.5 py-1 rounded-lg font-bold text-xs transition bg-orange-500 text-white shadow-sm touch-manipulation">📄 直式 (20X20)</button>
+          <button onclick="selectOrientation('landscape')" id="orient-btn-landscape" class="px-2.5 py-1 rounded-lg font-bold text-xs transition text-slate-600 hover:text-slate-900 touch-manipulation">🖼️ 橫式 (20X14)</button>
+        </div>
+      </div>
 
-    <script>
-        let currentMultiplier = 2;
-        let currentPatternMode = 'lms';
-        let currentLayout = 'portrait-2';
-        let currentTool = 'pen';
-        let currentColorTheme = 'orange';
-        let isDrawing = false;
-        let isShowingAnswer = false;
+      <!-- 觸控塗色工具選單 -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs sm:text-sm font-bold text-slate-600 shrink-0">觸控工具：</span>
+        <div class="inline-flex rounded-xl p-0.5 bg-slate-100 border border-slate-200">
+          <button onclick="setTouchTool('paint')" id="tool-btn-paint" class="px-2.5 py-1 rounded-lg font-bold text-xs transition bg-orange-500 text-white shadow-sm touch-manipulation">🖌️ 塗色模式</button>
+          <button onclick="setTouchTool('erase')" id="tool-btn-erase" class="px-2.5 py-1 rounded-lg font-bold text-xs transition text-slate-600 hover:text-slate-900 touch-manipulation">🧼 橡皮擦</button>
+        </div>
+      </div>
 
-        const ROWS = 14;
-        const COLS = 20;
+      <!-- 主題色彩選擇器 -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs sm:text-sm font-bold text-slate-600 shrink-0">主題色彩：</span>
+        <div class="flex gap-1.5" id="color-selector">
+          <button onclick="changeTheme('#f97316')" class="w-6 h-6 rounded-full bg-orange-500 ring-2 ring-offset-1 ring-orange-500 touch-manipulation"></button>
+          <button onclick="changeTheme('#3b82f6')" class="w-6 h-6 rounded-full bg-blue-500 touch-manipulation"></button>
+          <button onclick="changeTheme('#10b981')" class="w-6 h-6 rounded-full bg-emerald-500 touch-manipulation"></button>
+          <button onclick="changeTheme('#8b5cf6')" class="w-6 h-6 rounded-full bg-purple-500 touch-manipulation"></button>
+          <button onclick="changeTheme('#ec4899')" class="w-6 h-6 rounded-full bg-pink-500 touch-manipulation"></button>
+        </div>
+      </div>
+    </div>
+  </header>
 
-        const colors = {
-            orange: { bg: 'bg-orange-500', hex: '#f97316' },
-            blue: { bg: 'bg-blue-500', hex: '#3b82f6' },
-            green: { bg: 'bg-emerald-500', hex: '#10b981' },
-            purple: { bg: 'bg-purple-500', hex: '#a855f7' },
-            pink: { bg: 'bg-pink-500', hex: '#ec4899' }
-        };
+  <!-- 學習單主體容器 (支援直式與橫式單頁) -->
+  <main id="worksheet-main" class="print-container portrait-mode max-w-4xl mx-auto bg-white rounded-2xl shadow-lg border border-slate-200 p-4 sm:p-8 mb-10 transition-all duration-300">
+    <div id="sheets-container" class="flex flex-col gap-6">
+      <!-- 由 JS 動態生成學習單內容 -->
+    </div>
+  </main>
 
-        function init() {
-            renderMultiplierButtons();
-            generateGrid();
-            document.addEventListener('mouseup', () => isDrawing = false);
-            document.addEventListener('touchend', () => isDrawing = false);
+  <!-- 自訂成績核對視窗 -->
+  <div id="result-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden no-print">
+    <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl border border-slate-100 text-center transform transition-all flex flex-col max-h-[90vh]">
+      <div class="text-4xl mb-2" id="modal-icon">🎉</div>
+      <h3 class="text-xl font-bold text-slate-800 mb-3" id="modal-title">驗算批改結果</h3>
+      
+      <div id="modal-details-container" class="overflow-y-auto px-1 space-y-3 mb-4">
+        <!-- 動態生成的成績區塊將插入於此 -->
+      </div>
+
+      <p id="modal-msg" class="text-sm font-medium text-slate-600 mb-5 shrink-0">太棒了！全對！隱藏數字成功顯現了！</p>
+      <button onclick="closeModal()" class="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold transition shadow-md touch-manipulation shrink-0">
+        確定
+      </button>
+    </div>
+  </div>
+
+  <!-- 列印備用提示視窗 -->
+  <div id="print-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden no-print">
+    <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl border border-slate-100 text-center">
+      <div class="text-4xl mb-2">🖨️</div>
+      <h3 class="text-xl font-bold text-slate-800 mb-2">開啟列印選單</h3>
+      <p class="text-sm text-slate-600 mb-4">若系統未自動彈出列印視窗，請按下鍵盤快捷鍵：<br><span class="inline-block mt-2 font-mono font-bold bg-slate-100 px-3 py-1 rounded-lg text-orange-600">Ctrl + P</span> (Mac: <span class="font-mono font-bold bg-slate-100 px-3 py-1 rounded-lg text-orange-600">Cmd + P</span>)</p>
+      <button onclick="closePrintModal()" class="w-full py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold transition">
+        好，我知道了
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // 全域狀態變數
+    let currentNum = 2;
+    let currentThemeColor = '#f97316';
+    let currentPatternMode = 'lms';
+    let currentOrientation = 'portrait'; // 'portrait': 直式(20x20), 'landscape': 橫式(14x20)
+    let touchTool = 'paint';
+    let showAnswers = false;
+    let isMouseDown = false;
+    let gridMatrices = []; // 儲存題目的網格陣列
+
+    // 七段顯示器 Segment 對照表
+    const segs = {
+      0: ['a', 'b', 'c', 'd', 'e', 'f'],
+      1: ['b', 'c'],
+      2: ['a', 'b', 'g', 'e', 'd'],
+      3: ['a', 'b', 'g', 'c', 'd'],
+      4: ['f', 'g', 'b', 'c'],
+      5: ['a', 'f', 'g', 'c', 'd'],
+      6: ['a', 'f', 'g', 'e', 'c', 'd'],
+      7: ['a', 'b', 'c'],
+      8: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+      9: ['a', 'b', 'c', 'd', 'f', 'g']
+    };
+
+    // 大數位 (12x6)
+    function drawLargeDigit(matrix, num, startRow, startCol) {
+      const activeSegs = segs[num] || [];
+      const numRows = matrix.length;
+      const numCols = matrix[0].length;
+      const setCells = (rMin, rMax, cMin, cMax) => {
+        for (let r = rMin; r <= rMax; r++) {
+          for (let c = cMin; c <= cMax; c++) {
+            if (r >= 0 && r < numRows && c >= 0 && c < numCols) matrix[r][c] = true;
+          }
+        }
+      };
+      if (activeSegs.includes('a')) setCells(startRow, startRow + 1, startCol, startCol + 5);
+      if (activeSegs.includes('f')) setCells(startRow, startRow + 5, startCol, startCol + 1);
+      if (activeSegs.includes('b')) setCells(startRow, startRow + 5, startCol + 4, startCol + 5);
+      if (activeSegs.includes('g')) setCells(startRow + 5, startRow + 6, startCol, startCol + 5);
+      if (activeSegs.includes('e')) setCells(startRow + 5, startRow + 11, startCol, startCol + 1);
+      if (activeSegs.includes('c')) setCells(startRow + 5, startRow + 11, startCol + 4, startCol + 5);
+      if (activeSegs.includes('d')) setCells(startRow + 10, startRow + 11, startCol, startCol + 5);
+    }
+
+    // 中數位 (10x5)
+    function drawMediumDigit(matrix, num, startRow, startCol) {
+      const activeSegs = segs[num] || [];
+      const numRows = matrix.length;
+      const numCols = matrix[0].length;
+      const setCells = (rMin, rMax, cMin, cMax) => {
+        for (let r = rMin; r <= rMax; r++) {
+          for (let c = cMin; c <= cMax; c++) {
+            if (r >= 0 && r < numRows && c >= 0 && c < numCols) matrix[r][c] = true;
+          }
+        }
+      };
+      if (activeSegs.includes('a')) setCells(startRow, startRow + 1, startCol, startCol + 4);
+      if (activeSegs.includes('f')) setCells(startRow, startRow + 4, startCol, startCol + 1);
+      if (activeSegs.includes('b')) setCells(startRow, startRow + 4, startCol + 3, startCol + 4);
+      if (activeSegs.includes('g')) setCells(startRow + 4, startRow + 5, startCol, startCol + 4);
+      if (activeSegs.includes('e')) setCells(startRow + 4, startRow + 9, startCol, startCol + 1);
+      if (activeSegs.includes('c')) setCells(startRow + 4, startRow + 9, startCol + 3, startCol + 4);
+      if (activeSegs.includes('d')) setCells(startRow + 8, startRow + 9, startCol, startCol + 4);
+    }
+
+    // 小數位 (7x4)
+    function drawSmallDigit7x4(matrix, num, startRow, startCol) {
+      const activeSegs = segs[num] || [];
+      const numRows = matrix.length;
+      const numCols = matrix[0].length;
+      const setCells = (rMin, rMax, cMin, cMax) => {
+        for (let r = rMin; r <= rMax; r++) {
+          for (let c = cMin; c <= cMax; c++) {
+            if (r >= 0 && r < numRows && c >= 0 && c < numCols) matrix[r][c] = true;
+          }
+        }
+      };
+      if (activeSegs.includes('a')) setCells(startRow, startRow, startCol, startCol + 3);
+      if (activeSegs.includes('f')) setCells(startRow, startRow + 3, startCol, startCol);
+      if (activeSegs.includes('b')) setCells(startRow, startRow + 3, startCol + 3, startCol + 3);
+      if (activeSegs.includes('g')) setCells(startRow + 3, startRow + 3, startCol, startCol + 3);
+      if (activeSegs.includes('e')) setCells(startRow + 3, startRow + 6, startCol, startCol);
+      if (activeSegs.includes('c')) setCells(startRow + 3, startRow + 6, startCol + 3, startCol + 3);
+      if (activeSegs.includes('d')) setCells(startRow + 6, startRow + 6, startCol, startCol + 3);
+    }
+
+    // 小數位 (5x3)
+    function drawSmallDigit5x3(matrix, num, startRow, startCol) {
+      const activeSegs = segs[num] || [];
+      const numRows = matrix.length;
+      const numCols = matrix[0].length;
+      const setCells = (rMin, rMax, cMin, cMax) => {
+        for (let r = rMin; r <= rMax; r++) {
+          for (let c = cMin; c <= cMax; c++) {
+            if (r >= 0 && r < numRows && c >= 0 && c < numCols) matrix[r][c] = true;
+          }
+        }
+      };
+      if (activeSegs.includes('a')) setCells(startRow, startRow, startCol, startCol + 2);
+      if (activeSegs.includes('f')) setCells(startRow, startRow + 2, startCol, startCol);
+      if (activeSegs.includes('b')) setCells(startRow, startRow + 2, startCol + 2, startCol + 2);
+      if (activeSegs.includes('g')) setCells(startRow + 2, startRow + 2, startCol, startCol + 2);
+      if (activeSegs.includes('e')) setCells(startRow + 2, startRow + 4, startCol, startCol);
+      if (activeSegs.includes('c')) setCells(startRow + 2, startRow + 4, startCol + 2, startCol + 2);
+      if (activeSegs.includes('d')) setCells(startRow + 4, startRow + 4, startCol, startCol + 2);
+    }
+
+    // 產生圖案動態列數/欄數布林矩陣
+    function generatePatternMatrix(num, numRows = 14, numCols = 20) {
+      const matrix = Array.from({ length: numRows }, () => Array(numCols).fill(false));
+
+      const getItemDimensions = (type) => {
+        if (type === 'lg') return { h: 12, w: 6 };
+        if (type === 'med') return { h: 10, w: 5 };
+        if (type === 'sm7') return { h: 7, w: 4 };
+        return { h: 5, w: 3 };
+      };
+
+      function checkOverlap(r1, c1, h1, w1, r2, c2, h2, w2, margin = 1) {
+        return !(r1 + h1 + margin <= r2 || 
+                 r2 + h2 + margin <= r1 || 
+                 c1 + w1 + margin <= c2 || 
+                 c2 + w2 + margin <= c1);
+      }
+
+      const layoutTemplates = {
+        lms: [
+          [{type: 'lg', base: [1, 0]}, {type: 'med', base: [3, 8]}, {type: 'sm7', base: [1, 15]}, {type: 'sm5', base: [10, 15]}],
+          [{type: 'lg', base: [2, 13]}, {type: 'med', base: [3, 1]}, {type: 'sm7', base: [1, 7]}, {type: 'sm5', base: [10, 7]}],
+          [{type: 'lg', base: [1, 7]}, {type: 'med', base: [3, 0]}, {type: 'sm7', base: [1, 15]}, {type: 'sm5', base: [10, 15]}]
+        ],
+        lm: [
+          [{type: 'lg', base: [2, 0]}, {type: 'med', base: [1, 8]}, {type: 'med', base: [4, 14]}],
+          [{type: 'lg', base: [1, 13]}, {type: 'med', base: [4, 0]}, {type: 'med', base: [2, 7]}],
+          [{type: 'lg', base: [2, 7]}, {type: 'med', base: [1, 0]}, {type: 'med', base: [3, 14]}]
+        ],
+        ls: [
+          [{type: 'lg', base: [2, 0]}, {type: 'sm7', base: [1, 8]}, {type: 'sm5', base: [10, 8]}, {type: 'sm7', base: [8, 14]}, {type: 'sm5', base: [1, 15]}],
+          [{type: 'lg', base: [1, 13]}, {type: 'sm7', base: [3, 0]}, {type: 'sm5', base: [10, 1]}, {type: 'sm7', base: [1, 7]}, {type: 'sm5', base: [9, 7]}],
+          [{type: 'lg', base: [3, 7]}, {type: 'sm7', base: [1, 1]}, {type: 'sm5', base: [10, 0]}, {type: 'sm7', base: [8, 15]}, {type: 'sm5', base: [1, 15]}]
+        ],
+        ms: [
+          [{type: 'med', base: [1, 0]}, {type: 'med', base: [4, 7]}, {type: 'sm7', base: [1, 14]}, {type: 'sm5', base: [10, 15]}],
+          [{type: 'med', base: [4, 14]}, {type: 'med', base: [1, 7]}, {type: 'sm7', base: [8, 0]}, {type: 'sm5', base: [1, 1]}]
+        ],
+        l: [
+          [{type: 'lg', base: [2, 7]}],
+          [{type: 'lg', base: [1, 1]}, {type: 'lg', base: [3, 11]}],
+          [{type: 'lg', base: [3, 0]}, {type: 'lg', base: [1, 7]}, {type: 'lg', base: [3, 13]}]
+        ],
+        m: [
+          [{type: 'med', base: [2, 1]}, {type: 'med', base: [4, 8]}, {type: 'med', base: [1, 14]}],
+          [{type: 'med', base: [1, 2]}, {type: 'med', base: [4, 11]}]
+        ],
+        s: [
+          [{type: 'sm7', base: [1, 0]}, {type: 'sm5', base: [10, 1]}, {type: 'sm7', base: [3, 7]}, {type: 'sm5', base: [10, 8]}, {type: 'sm7', base: [1, 14]}, {type: 'sm5', base: [10, 15]}],
+          [{type: 'sm5', base: [2, 1]}, {type: 'sm7', base: [8, 2]}, {type: 'sm5', base: [1, 8]}, {type: 'sm7', base: [9, 8]}, {type: 'sm5', base: [2, 15]}, {type: 'sm7', base: [8, 14]}]
+        ]
+      };
+
+      const modeTemplates = layoutTemplates[currentPatternMode] || layoutTemplates['lms'];
+      const template = modeTemplates[Math.floor(Math.random() * modeTemplates.length)];
+
+      const placedBoxes = [];
+
+      for (const item of template) {
+        let type = item.type;
+        if (type === 'sm') type = Math.random() > 0.5 ? 'sm7' : 'sm5';
+
+        const dim = getItemDimensions(type);
+        let placed = false;
+        let bestR = item.base[0];
+        let bestC = item.base[1];
+
+        for (let attempt = 0; attempt < 40; attempt++) {
+          const jitterR = Math.floor(Math.random() * 5) - 2;
+          const jitterC = Math.floor(Math.random() * 5) - 2;
+
+          const testR = Math.max(0, Math.min(numRows - dim.h, item.base[0] + jitterR));
+          const testC = Math.max(0, Math.min(numCols - dim.w, item.base[1] + jitterC));
+
+          const overlaps = placedBoxes.some(box => checkOverlap(testR, testC, dim.h, dim.w, box.r, box.c, box.h, box.w, 1));
+
+          if (!overlaps) {
+            bestR = testR;
+            bestC = testC;
+            placed = true;
+            break;
+          }
         }
 
-        function renderMultiplierButtons() {
-            const container = document.getElementById('multiplier-btns');
-            container.innerHTML = '';
-            for (let i = 2; i <= 9; i++) {
-                const btn = document.createElement('button');
-                btn.innerText = i;
-                if (i === currentMultiplier) {
-                    btn.className = `w-7 h-7 rounded-lg font-black text-sm text-white ${colors[currentColorTheme].bg} shadow transition`;
-                } else {
-                    btn.className = `w-7 h-7 rounded-lg font-bold text-sm text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition`;
-                }
-                btn.onclick = () => { currentMultiplier = i; renderMultiplierButtons(); generateGrid(); };
-                container.appendChild(btn);
+        if (!placed) {
+          for (let r = 0; r <= numRows - dim.h; r++) {
+            for (let c = 0; c <= numCols - dim.w; c++) {
+              const overlaps = placedBoxes.some(box => checkOverlap(r, c, dim.h, dim.w, box.r, box.c, box.h, box.w, 1));
+              if (!overlaps) {
+                bestR = r;
+                bestC = c;
+                placed = true;
+                break;
+              }
             }
+            if (placed) break;
+          }
         }
 
-        function setPattern(mode) {
-            currentPatternMode = mode;
-            const btns = document.getElementById('pattern-btns').children;
-            Array.from(btns).forEach(btn => {
-                if (btn.getAttribute('onclick').includes(mode)) {
-                    btn.className = `px-3 py-1 text-xs font-bold text-white ${colors[currentColorTheme].bg}`;
-                } else {
-                    btn.className = 'px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100';
-                }
-            });
-            generateGrid();
+        if (placed) {
+          placedBoxes.push({ r: bestR, c: bestC, h: dim.h, w: dim.w });
+
+          if (type === 'lg') drawLargeDigit(matrix, num, bestR, bestC);
+          else if (type === 'med') drawMediumDigit(matrix, num, bestR, bestC);
+          else if (type === 'sm7') drawSmallDigit7x4(matrix, num, bestR, bestC);
+          else if (type === 'sm5') drawSmallDigit5x3(matrix, num, bestR, bestC);
+        }
+      }
+
+      return matrix;
+    }
+
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    // 生成單一題目的網格資料
+    function generateSingleGridData(numRows = 14, numCols = 20) {
+      const patternMatrix = generatePatternMatrix(currentNum, numRows, numCols);
+      const validAnswers = [];
+      for (let i = 1; i <= 10; i++) validAnswers.push(currentNum * i);
+
+      let targetCount = 0;
+      for (let r = 0; r < numRows; r++) {
+        for (let c = 0; c < numCols; c++) {
+          if (patternMatrix[r][c]) targetCount++;
+        }
+      }
+
+      let targetPool = [];
+      while (targetPool.length < targetCount) {
+        targetPool = targetPool.concat(validAnswers);
+      }
+      targetPool = targetPool.slice(0, targetCount);
+      shuffleArray(targetPool);
+
+      const distractors = [];
+      const maxRange = Math.max(100, currentNum * 12);
+      for (let n = 1; n <= maxRange; n++) {
+        if (n % currentNum !== 0) distractors.push(n);
+      }
+
+      const totalCells = numRows * numCols;
+      const nonTargetCount = totalCells - targetCount;
+      let distractorPool = [];
+      while (distractorPool.length < nonTargetCount) {
+        distractorPool = distractorPool.concat(distractors);
+      }
+      distractorPool = distractorPool.slice(0, nonTargetCount);
+      shuffleArray(distractorPool);
+
+      const matrix = [];
+      let tIndex = 0;
+      let dIndex = 0;
+
+      for (let r = 0; r < numRows; r++) {
+        const row = [];
+        for (let c = 0; c < numCols; c++) {
+          const isTarget = patternMatrix[r][c];
+          const val = isTarget ? targetPool[tIndex++] : distractorPool[dIndex++];
+          row.push({ row: r, col: c, val: val, isTarget: isTarget, painted: false });
+        }
+        matrix.push(row);
+      }
+      return matrix;
+    }
+
+    window.onload = function() {
+      initSelector();
+      selectNumber(2);
+
+      window.addEventListener('mouseup', () => isMouseDown = false);
+      window.addEventListener('touchend', () => isMouseDown = false);
+    };
+
+    function initSelector() {
+      const container = document.getElementById('num-selector');
+      container.innerHTML = '';
+      for (let i = 2; i <= 9; i++) {
+        const btn = document.createElement('button');
+        btn.innerText = i;
+        btn.className = `w-8 h-8 sm:w-9 sm:h-9 rounded-xl font-black text-sm sm:text-base transition border touch-manipulation active:scale-95 ${
+          i === currentNum 
+            ? 'bg-orange-500 text-white border-orange-500 shadow-sm' 
+            : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300'
+        }`;
+        btn.id = `num-btn-${i}`;
+        btn.onclick = () => selectNumber(i);
+        container.appendChild(btn);
+      }
+    }
+
+    function selectNumber(num) {
+      currentNum = num;
+      for (let i = 2; i <= 9; i++) {
+        const btn = document.getElementById(`num-btn-${i}`);
+        if (btn) {
+          if (i === num) {
+            btn.className = 'w-8 h-8 sm:w-9 sm:h-9 rounded-xl font-black text-sm sm:text-base transition border bg-orange-500 text-white border-orange-500 shadow-sm touch-manipulation active:scale-95';
+            btn.style.backgroundColor = currentThemeColor;
+            btn.style.borderColor = currentThemeColor;
+          } else {
+            btn.className = 'w-8 h-8 sm:w-9 sm:h-9 rounded-xl font-black text-sm sm:text-base transition border bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300 touch-manipulation active:scale-95';
+            btn.style.backgroundColor = '';
+            btn.style.borderColor = '';
+          }
+        }
+      }
+      renderWorksheet();
+    }
+
+    function selectPatternMode(mode) {
+      currentPatternMode = mode;
+      const modes = ['lms', 'lm', 'ls', 'ms', 'l', 'm', 's'];
+      modes.forEach(m => {
+        const btn = document.getElementById(`mode-btn-${m}`);
+        if (btn) {
+          if (m === mode) {
+            btn.className = 'px-2.5 py-1 rounded-lg font-bold text-xs sm:text-sm transition text-white shadow-sm touch-manipulation';
+            btn.style.backgroundColor = currentThemeColor;
+          } else {
+            btn.className = 'px-2.5 py-1 rounded-lg font-bold text-xs sm:text-sm transition text-slate-600 hover:text-slate-900 touch-manipulation';
+            btn.style.backgroundColor = '';
+          }
+        }
+      });
+      renderWorksheet();
+    }
+
+    function selectOrientation(orient) {
+      currentOrientation = orient;
+      const mainEl = document.getElementById('worksheet-main');
+      const headerEl = document.getElementById('control-header');
+      const brandEl = document.getElementById('top-brand');
+      const btnPort = document.getElementById('orient-btn-portrait');
+      const btnLand = document.getElementById('orient-btn-landscape');
+      const pageStyle = document.getElementById('page-style');
+
+      if (orient === 'portrait') {
+        mainEl.className = 'print-container portrait-mode max-w-4xl mx-auto bg-white rounded-2xl shadow-lg border border-slate-200 p-4 sm:p-8 mb-10 transition-all duration-300';
+        if (headerEl) headerEl.className = 'no-print max-w-4xl mx-auto bg-white rounded-2xl shadow-md p-4 mb-6 border border-slate-200 transition-all duration-300';
+        if (brandEl) brandEl.className = 'no-print w-full max-w-4xl mx-auto flex items-center justify-start mb-4 px-2 fade-in';
+        btnPort.className = 'px-2.5 py-1 rounded-lg font-bold text-xs transition text-white shadow-sm touch-manipulation';
+        btnPort.style.backgroundColor = currentThemeColor;
+        btnLand.className = 'px-2.5 py-1 rounded-lg font-bold text-xs transition text-slate-600 hover:text-slate-900 touch-manipulation';
+        btnLand.style.backgroundColor = '';
+        pageStyle.innerHTML = pageStyle.innerHTML.replace('@page { size: A4 landscape; margin: 4mm 6mm; }', '@page { size: A4 portrait; margin: 4mm 6mm; }');
+      } else {
+        mainEl.className = 'print-container landscape-mode max-w-6xl mx-auto bg-white rounded-2xl shadow-lg border border-slate-200 p-6 sm:p-10 mb-10 transition-all duration-300';
+        if (headerEl) headerEl.className = 'no-print max-w-6xl mx-auto bg-white rounded-2xl shadow-md p-4 mb-6 border border-slate-200 transition-all duration-300';
+        if (brandEl) brandEl.className = 'no-print w-full max-w-6xl mx-auto flex items-center justify-start mb-4 px-2 fade-in';
+        btnLand.className = 'px-2.5 py-1 rounded-lg font-bold text-xs transition text-white shadow-sm touch-manipulation';
+        btnLand.style.backgroundColor = currentThemeColor;
+        btnPort.className = 'px-2.5 py-1 rounded-lg font-bold text-xs transition text-slate-600 hover:text-slate-900 touch-manipulation';
+        btnPort.style.backgroundColor = '';
+        pageStyle.innerHTML = pageStyle.innerHTML.replace('@page { size: A4 portrait; margin: 4mm 6mm; }', '@page { size: A4 landscape; margin: 4mm 6mm; }');
+      }
+      renderWorksheet();
+    }
+
+    function setTouchTool(tool) {
+      touchTool = tool;
+      const btnPaint = document.getElementById('tool-btn-paint');
+      const btnErase = document.getElementById('tool-btn-erase');
+
+      if (tool === 'paint') {
+        btnPaint.className = 'px-2.5 py-1 rounded-lg font-bold text-xs transition text-white shadow-sm touch-manipulation';
+        btnPaint.style.backgroundColor = currentThemeColor;
+        btnErase.className = 'px-2.5 py-1 rounded-lg font-bold text-xs transition text-slate-600 hover:text-slate-900 touch-manipulation';
+        btnErase.style.backgroundColor = '';
+      } else {
+        btnErase.className = 'px-2.5 py-1 rounded-lg font-bold text-xs transition text-white shadow-sm touch-manipulation';
+        btnErase.style.backgroundColor = currentThemeColor;
+        btnPaint.className = 'px-2.5 py-1 rounded-lg font-bold text-xs transition text-slate-600 hover:text-slate-900 touch-manipulation';
+        btnPaint.style.backgroundColor = '';
+      }
+    }
+
+    function changeTheme(color) {
+      currentThemeColor = color;
+      selectPatternMode(currentPatternMode);
+      selectOrientation(currentOrientation);
+      setTouchTool(touchTool);
+      updateGridColors();
+    }
+
+    // 繪製整張學習單
+    function renderWorksheet() {
+      const container = document.getElementById('sheets-container');
+      container.innerHTML = '';
+
+      const sheetCount = 1;
+      const numRows = currentOrientation === 'portrait' ? 20 : 14;
+      const numCols = 20;
+      gridMatrices = [];
+
+      for (let s = 0; s < sheetCount; s++) {
+        gridMatrices.push(generateSingleGridData(numRows, numCols));
+
+        if (s > 0) {
+          const divider = document.createElement('div');
+          divider.className = 'border-t-2 border-dashed border-slate-300 my-4';
+          container.appendChild(divider);
         }
 
-        function setLayoutMode(mode) {
-            currentLayout = mode;
-            const btnP = document.getElementById('layout-portrait');
-            const btnL = document.getElementById('layout-landscape');
-            btnP.className = mode === 'portrait-2' ? `px-3 py-1 text-xs font-bold text-white ${colors[currentColorTheme].bg}` : 'px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100';
-            btnL.className = mode === 'landscape-1' ? `px-3 py-1 text-xs font-bold text-white ${colors[currentColorTheme].bg}` : 'px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100';
-            
-            const mainContainer = document.getElementById('worksheet-main');
-            if (mode === 'portrait-2') {
-                mainContainer.className = 'max-w-4xl mx-auto mt-4 bg-white shadow-xl rounded-xl p-6 print:shadow-none print:p-0 print:m-0 print:max-w-none transition-all';
-            } else {
-                mainContainer.className = 'max-w-5xl mx-auto mt-4 bg-white shadow-xl rounded-xl p-6 print:shadow-none print:p-0 print:m-0 print:max-w-none transition-all';
-            }
-            generateGrid();
-        }
+        const sheetBlock = document.createElement('div');
+        sheetBlock.className = 'single-sheet-block flex flex-col gap-4';
+        sheetBlock.id = `sheet-block-${s}`;
 
-        function setTool(tool) {
-            currentTool = tool;
-            const btnP = document.getElementById('tool-pen');
-            const btnE = document.getElementById('tool-eraser');
-            btnP.className = tool === 'pen' ? `px-3 py-1 text-xs font-bold text-white ${colors[currentColorTheme].bg}` : 'px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100';
-            btnE.className = tool === 'eraser' ? `px-3 py-1 text-xs font-bold text-white ${colors[currentColorTheme].bg}` : 'px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100';
-        }
+        // 頁眉學生資訊欄
+        sheetBlock.innerHTML = `
+          <div class="sheet-header flex justify-between items-end border-b-2 border-slate-900 pb-2 mb-2">
+            <div class="flex items-baseline gap-2">
+              <span class="title-badge text-xl sm:text-2xl font-black px-3 py-1 text-white rounded-lg shadow-sm" style="background-color: ${currentThemeColor};">乘法</span>
+              <h2 class="text-xl sm:text-2xl font-black tracking-wider text-slate-900">算算 ． 找找 ． 塗塗</h2>
+            </div>
+            <div class="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm font-black text-slate-900">
+              <div class="flex items-center">
+                <span class="inline-block border-b-2 border-slate-900 w-7 sm:w-9 h-4 sm:h-5 mx-0.5"></span>年<span class="inline-block border-b-2 border-slate-900 w-7 sm:w-9 h-4 sm:h-5 mx-0.5"></span>班
+              </div>
+              <div class="flex items-center">
+                姓名：<span class="inline-block border-b-2 border-slate-900 w-20 sm:w-24 h-4 sm:h-5"></span>
+              </div>
+              <div class="flex items-center" id="score-display-${s}">
+                得分：<span class="inline-block border-b-2 border-slate-900 w-12 sm:w-16 h-4 sm:h-5"></span>
+              </div>
+            </div>
+          </div>
 
-        function setColor(theme) {
-            currentColorTheme = theme;
-            const btns = document.getElementById('color-btns').children;
-            Array.from(btns).forEach(btn => {
-                if (btn.getAttribute('onclick').includes(theme)) {
-                    btn.classList.add('ring-2', 'ring-offset-1');
-                } else {
-                    btn.classList.remove('ring-2', 'ring-offset-1');
-                }
-            });
-            renderMultiplierButtons();
-            setPattern(currentPatternMode);
-            setLayoutMode(currentLayout);
-            setTool(currentTool);
-            
-            document.querySelectorAll('[data-painted="true"]').forEach(cell => {
-                cell.className = `grid-cell ${colors[currentColorTheme].bg}`;
-            });
-        }
-
-        function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
-
-        function checkOverlap(r, c, w, h, gridMatrix) {
-            for (let i = Math.max(0, r - 1); i < Math.min(ROWS, r + h + 1); i++) {
-                for (let j = Math.max(0, c - 1); j < Math.min(COLS, c + w + 1); j++) {
-                    if (gridMatrix[i][j]) return true;
-                }
-            }
-            return false;
-        }
-
-        function generateGrid() {
-            isShowingAnswer = false;
-            const container = document.getElementById('worksheet-content');
-            container.innerHTML = '';
-            const totalSheets = currentLayout === 'portrait-2' ? 2 : 1;
-            
-            for (let s = 0; s < totalSheets; s++) {
-                container.innerHTML += createWorksheet(currentMultiplier, currentPatternMode, s, totalSheets);
-            }
-        }
-
-        function createWorksheet(multiplier, mode, index, total) {
-            const gridMatrix = Array(ROWS).fill(0).map(() => Array(COLS).fill(false));
-            
-            const digits = {
-                '12x6': [
-                    [[0,0],[0,1],[0,2],[0,3],[0,4],[0,5], [1,0],[1,1],[1,2],[1,3],[1,4],[1,5]],
-                    [[5,0],[5,1],[5,2],[5,3],[5,4],[5,5], [6,0],[6,1],[6,2],[6,3],[6,4],[6,5]],
-                    [[10,0],[10,1],[10,2],[10,3],[10,4],[10,5], [11,0],[11,1],[11,2],[11,3],[11,4],[11,5]],
-                    [[2,0],[3,0],[4,0], [2,1],[3,1],[4,1]],
-                    [[2,4],[3,4],[4,4], [2,5],[3,5],[4,5]],
-                    [[7,0],[8,0],[9,0], [7,1],[8,1],[9,1]],
-                    [[7,4],[8,4],[9,4], [7,5],[8,5],[9,5]]
-                ],
-                '10x5': [
-                    [[0,0],[0,1],[0,2],[0,3],[0,4], [1,0],[1,1],[1,2],[1,3],[1,4]],
-                    [[4,0],[4,1],[4,2],[4,3],[4,4], [5,0],[5,1],[5,2],[5,3],[5,4]],
-                    [[8,0],[8,1],[8,2],[8,3],[8,4], [9,0],[9,1],[9,2],[9,3],[9,4]],
-                    [[2,0],[3,0], [2,1],[3,1]],
-                    [[2,3],[3,3], [2,4],[3,4]],
-                    [[6,0],[7,0], [6,1],[7,1]],
-                    [[6,3],[7,3], [6,4],[7,4]]
-                ],
-                '7x4': [
-                    [[0,0],[0,1],[0,2],[0,3]],
-                    [[3,0],[3,1],[3,2],[3,3]],
-                    [[6,0],[6,1],[6,2],[6,3]],
-                    [[1,0],[2,0]],
-                    [[1,3],[2,3]],
-                    [[4,0],[5,0]],
-                    [[4,3],[5,3]]
-                ],
-                '5x3': [
-                    [[0,0],[0,1],[0,2]],
-                    [[2,0],[2,1],[2,2]],
-                    [[4,0],[4,1],[4,2]],
-                    [[1,0]],
-                    [[1,2]],
-                    [[3,0]],
-                    [[3,2]]
-                ]
-            };
-
-            const shapes = [
-                [0,2,3,4,5,6], [4,6], [0,1,2,4,5], [0,1,2,4,6], [1,3,4,6],
-                [0,1,2,3,6], [0,1,2,3,5,6], [0,4,6], [0,1,2,3,4,5,6], [0,1,2,3,4,6]
-            ];
-
-            function placeDigit(size, w, h, digitVal) {
-                let placed = false;
-                let attempts = 0;
-                while (!placed && attempts < 100) {
-                    const r = getRandomInt(0, ROWS - h);
-                    const c = getRandomInt(0, COLS - w);
-                    if (!checkOverlap(r, c, w, h, gridMatrix)) {
-                        const segments = shapes[digitVal];
-                        segments.forEach(segIdx => {
-                            digits[size][segIdx].forEach(([dr, dc]) => {
-                                gridMatrix[r + dr][c + dc] = true;
-                            });
-                        });
-                        placed = true;
-                    }
-                    attempts++;
-                }
-            }
-
-            const targetNums = [1, 2, 3]; 
-            targetNums.forEach(num => {
-                let sizeChoice;
-                if (mode === 'lms') sizeChoice = ['12x6', '10x5', '7x4', '5x3'][getRandomInt(0, 3)];
-                else if (mode === 'lm') sizeChoice = ['12x6', '10x5'][getRandomInt(0, 1)];
-                else if (mode === 'ls') sizeChoice = ['12x6', '7x4', '5x3'][getRandomInt(0, 2)];
-                else if (mode === 'ms') sizeChoice = ['10x5', '7x4', '5x3'][getRandomInt(0, 2)];
-                else if (mode === 'l') sizeChoice = '12x6';
-                else if (mode === 'm') sizeChoice = '10x5';
-                else if (mode === 's') sizeChoice = ['7x4', '5x3'][getRandomInt(0, 1)];
-
-                if (sizeChoice === '12x6') placeDigit('12x6', 6, 12, num);
-                else if (sizeChoice === '10x5') placeDigit('10x5', 5, 10, num);
-                else if (sizeChoice === '7x4') placeDigit('7x4', 4, 7, num);
-                else if (sizeChoice === '5x3') placeDigit('5x3', 3, 5, num);
-            });
-
-            const nonMultiples = [];
-            for (let i = 1; i <= 99; i++) {
-                if (i % multiplier !== 0) nonMultiples.push(i);
-            }
-            const multiples = [];
-            for (let i = 1; i <= 10; i++) {
-                multiples.push(multiplier * i);
-            }
-
-            const idSuffix = `sheet-${index}`;
-            let html = `<div class="print-sheet w-full relative mb-4">`;
-
-            // 第一題或是橫式題目：包含抬頭與 10 組單列算式
-            if (index === 0) {
-                html += `
-                <div class="flex justify-between items-end border-b-2 border-slate-900 pb-1 mb-2">
-                    <h2 class="text-xl md:text-2xl font-black text-slate-900 flex items-center tracking-tight">
-                        <span class="bg-orange-500 text-white px-2 py-0.5 rounded mr-2 print:border print:border-slate-900 print:text-slate-900 print:bg-transparent">乘法</span> 算算・找找・塗塗
-                    </h2>
-                    <div class="flex space-x-4 text-sm md:text-base font-bold text-slate-900 pb-0.5">
-                        <span>___年___班</span>
-                        <span>姓名：_________</span>
-                    </div>
+          <div id="main-content-wrapper-${s}" class="flex flex-col gap-4">
+            <div id="left-section-${s}" class="flex flex-col gap-3">
+              <div id="equation-container-${s}" class="equation-container grid grid-cols-2 sm:grid-cols-5 gap-2.5"></div>
+              <div class="flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-300">
+                <div class="target-badge w-10 h-10 rounded-xl text-white font-black text-2xl flex items-center justify-center shadow-inner shrink-0" style="background-color: ${currentThemeColor};">
+                  ${currentNum}
                 </div>
-
-                <!-- 10 組乘法算式單列並排 -->
-                <div class="grid grid-cols-10 gap-1 mb-2">`;
-                for (let i = 1; i <= 10; i++) {
-                    html += `
-                    <div class="border border-slate-800 rounded px-1 py-1 flex items-center justify-between bg-white text-xs md:text-sm font-bold text-slate-900 shadow-none">
-                        <span class="whitespace-nowrap">${multiplier}×${i}=</span>
-                        <input type="text" maxlength="2" class="w-5 text-center border-b border-slate-900 font-black text-orange-600 print-black-text focus:outline-none bg-transparent" id="eq-input-${i}" oninput="syncInputs(${i}, this.value)">
-                    </div>`;
-                }
-                html += `</div>
-
-                <!-- 題目說明標籤 -->
-                <div class="bg-slate-50 print:bg-transparent rounded px-2.5 py-1 mb-2 border border-slate-300 print:border-slate-800 flex items-center">
-                    <span class="bg-orange-500 text-white print:text-slate-900 print:bg-transparent print:border print:border-slate-900 text-xs md:text-sm font-black w-5 h-5 flex items-center justify-center rounded mr-2">${multiplier}</span>
-                    <p class="text-xs md:text-sm font-bold text-slate-900 tracking-wide">請將「<span class="text-orange-600 print-black-text font-black">${multiplier} 的乘法</span>」答案的方格塗上顏色</p>
-                </div>`;
-            }
-
-            // 向量風細灰色實線題目網格 (佔 A4 寬度 90%)
-            html += `<div class="number-grid" id="grid-${idSuffix}">`;
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    const isTarget = gridMatrix[r][c];
-                    const num = isTarget ? multiples[Math.floor(Math.random() * multiples.length)] : nonMultiples[Math.floor(Math.random() * nonMultiples.length)];
-                    
-                    html += `
-                    <div class="grid-cell"
-                        id="cell-${idSuffix}-${r}-${c}"
-                        data-r="${r}" data-c="${c}"
-                        data-ans="${isTarget}"
-                        onmousedown="startDraw('${idSuffix}', ${r}, ${c})"
-                        onmouseenter="draw('${idSuffix}', ${r}, ${c})"
-                        ontouchstart="handleTouch(event, '${idSuffix}')"
-                        ontouchmove="handleTouch(event, '${idSuffix}')"
-                    >
-                        <span>${num}</span>
-                    </div>`;
-                }
-            }
-            html += `</div>`;
-
-            // 直式 2 題模式下的中間純剪裁虛線
-            if (total === 2 && index === 0) {
-                html += `
-                <div class="w-full flex justify-center items-center py-4 no-print">
-                    <div class="border-t-2 border-dashed border-slate-300 w-full"></div>
+                <div class="text-sm sm:text-base font-bold text-slate-800">
+                  請將「<span class="font-extrabold text-lg" style="color: ${currentThemeColor};">${currentNum} 的乘法</span>」答案的方格塗上顏色
                 </div>
-                <div class="w-full border-t-2 border-dashed border-slate-800 hidden print:block my-3"></div>`;
-            }
+              </div>
+            </div>
 
-            // 僅在最後一題底部出現一次的版權宣告
-            if (index === total - 1) {
-                html += `
-                <div class="mt-3 pt-1 border-t border-slate-400 flex justify-between items-center text-[10px] text-slate-600 font-bold">
-                    <span>國小數學領域 數位自主學習單</span>
-                    <span>設計：閒雲小築-數學小棧</span>
-                </div>`;
-            }
+            <div id="right-section-${s}" class="flex justify-center w-full">
+              <div id="number-grid-${s}" class="number-grid w-full bg-white rounded-none shadow-sm touch-none select-none"></div>
+            </div>
+          </div>
 
-            html += `</div>`;
-            return html;
+          <div class="pt-2 border-t border-slate-300 text-center text-[10px] sm:text-xs text-slate-500 flex justify-between items-center font-medium">
+            <span>國小數學領域 數位自主學習單</span>
+            <span>設計：閒雲小築-數學小棧</span>
+          </div>
+        `;
+
+        container.appendChild(sheetBlock);
+
+        // 生成 10 個乘法算式
+        const eqContainer = document.getElementById(`equation-container-${s}`);
+        for (let i = 1; i <= 10; i++) {
+          const ans = currentNum * i;
+          const eqBox = document.createElement('div');
+          eqBox.className = 'equation-box flex items-center justify-center gap-2 border-2 border-slate-600 rounded-xl p-3 bg-white font-mono font-black text-xl sm:text-2xl shadow-sm';
+          eqBox.innerHTML = `
+            <span class="text-slate-900">${currentNum}×${i}=</span>
+            <input type="text" id="eq-input-${s}-${i}" data-ans="${ans}" class="w-14 sm:w-16 text-center font-black text-slate-900 outline-none border-b-2 sm:border-b-3 border-slate-900 focus:border-orange-500 transition" placeholder="">
+          `;
+          eqContainer.appendChild(eqBox);
         }
 
-        function syncInputs(idx, val) {
-            const input = document.getElementById(`eq-input-${idx}`);
-            if (input) input.value = val;
-        }
+        renderGridDOM(s);
+      }
 
-        function startDraw(sheetId, r, c) {
-            isDrawing = true;
-            draw(sheetId, r, c);
-        }
+      if (showAnswers) fillAnswers();
+    }
 
-        function draw(sheetId, r, c) {
-            if (!isDrawing) return;
-            const cell = document.getElementById(`cell-${sheetId}-${r}-${c}`);
-            if (!cell) return;
-            
-            if (currentTool === 'pen') {
-                cell.className = `grid-cell ${colors[currentColorTheme].bg}`;
-                cell.setAttribute('data-painted', 'true');
-            } else {
-                cell.className = `grid-cell bg-white`;
-                cell.setAttribute('data-painted', 'false');
-            }
-        }
+    function renderGridDOM(sheetIdx) {
+      const gridEl = document.getElementById(`number-grid-${sheetIdx}`);
+      if (!gridEl) return;
+      gridEl.innerHTML = '';
 
-        function handleTouch(e, sheetId) {
+      const matrix = gridMatrices[sheetIdx];
+      const numRows = matrix.length;
+      const numCols = matrix[0].length;
+
+      for (let r = 0; r < numRows; r++) {
+        for (let c = 0; c < numCols; c++) {
+          const cellData = matrix[r][c];
+          const cell = document.createElement('div');
+          cell.id = `cell-${sheetIdx}-${r}-${c}`;
+          cell.className = 'grid-cell w-full aspect-square bg-white flex items-center justify-center font-extrabold text-xs sm:text-sm md:text-base text-slate-900 border-t border-l border-slate-700 cursor-pointer transition-all duration-75 select-none active:scale-95';
+          cell.innerText = cellData.val;
+
+          cell.onpointerdown = (e) => {
             e.preventDefault();
-            const touch = e.touches[0];
-            const elem = document.elementFromPoint(touch.clientX, touch.clientY);
-            if (elem && elem.id && elem.id.startsWith(`cell-${sheetId}`)) {
-                isDrawing = true;
-                const r = elem.getAttribute('data-r');
-                const c = elem.getAttribute('data-c');
-                draw(sheetId, parseInt(r), parseInt(c));
+            startPaint(sheetIdx, r, c);
+          };
+
+          cell.onpointerenter = (e) => {
+            if (isMouseDown && e.buttons !== 0) {
+              doPaint(sheetIdx, r, c);
             }
-        }
+          };
 
-        function clearDraw() {
-            document.querySelectorAll('[data-painted="true"]').forEach(cell => {
-                cell.className = `grid-cell bg-white`;
-                cell.setAttribute('data-painted', 'false');
-            });
-            for (let i = 1; i <= 10; i++) {
-                const el = document.getElementById(`eq-input-${i}`);
-                if (el) el.value = '';
+          cell.ontouchstart = (e) => {
+            e.preventDefault();
+            startPaint(sheetIdx, r, c);
+          };
+
+          gridEl.appendChild(cell);
+        }
+      }
+
+      gridEl.ontouchmove = (e) => {
+        e.preventDefault();
+        if (!isMouseDown) return;
+        const touch = e.touches ? e.touches[0] : e;
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (target && target.classList.contains('grid-cell')) {
+          const parts = target.id.split('-');
+          if (parts.length === 4) {
+            doPaint(parseInt(parts[1]), parseInt(parts[2]), parseInt(parts[3]));
+          }
+        }
+      };
+    }
+
+    function startPaint(sheetIdx, r, c) {
+      isMouseDown = true;
+      applyPaint(sheetIdx, r, c, touchTool === 'paint');
+    }
+
+    function doPaint(sheetIdx, r, c) {
+      if (isMouseDown) {
+        applyPaint(sheetIdx, r, c, touchTool === 'paint');
+      }
+    }
+
+    function applyPaint(sheetIdx, r, c, paint) {
+      if (!gridMatrices[sheetIdx]) return;
+      const cellData = gridMatrices[sheetIdx][r][c];
+      cellData.painted = paint;
+
+      const cellEl = document.getElementById(`cell-${sheetIdx}-${r}-${c}`);
+      if (cellEl) {
+        if (paint) {
+          cellEl.style.backgroundColor = currentThemeColor;
+          cellEl.style.color = '#ffffff';
+          cellEl.style.borderColor = currentThemeColor;
+        } else {
+          cellEl.style.backgroundColor = '#ffffff';
+          cellEl.style.color = '#0f172a';
+          cellEl.style.borderColor = '#334155';
+        }
+      }
+    }
+
+    function updateGridColors() {
+      for (let s = 0; s < gridMatrices.length; s++) {
+        const matrix = gridMatrices[s];
+        for (let r = 0; r < matrix.length; r++) {
+          for (let c = 0; c < matrix[r].length; c++) {
+            if (matrix[r][c].painted) {
+              const cellEl = document.getElementById(`cell-${s}-${r}-${c}`);
+              if (cellEl) {
+                cellEl.style.backgroundColor = currentThemeColor;
+                cellEl.style.borderColor = currentThemeColor;
+              }
             }
-            isShowingAnswer = false;
+          }
+        }
+      }
+    }
+
+    function regenerateNumbers() {
+      renderWorksheet();
+    }
+
+    function toggleAnswerKey() {
+      showAnswers = !showAnswers;
+      const btn = document.getElementById('btn-answer');
+      if (showAnswers) {
+        btn.innerText = '🙈 隱藏解答';
+        fillAnswers();
+      } else {
+        btn.innerText = '👁️ 顯示解答';
+        clearAnswersUI();
+      }
+    }
+
+    function fillAnswers() {
+      for (let s = 0; s < gridMatrices.length; s++) {
+        for (let i = 1; i <= 10; i++) {
+          const input = document.getElementById(`eq-input-${s}-${i}`);
+          if (input) {
+            input.value = input.dataset.ans;
+            input.style.color = currentThemeColor;
+          }
+        }
+        const matrix = gridMatrices[s];
+        for (let r = 0; r < matrix.length; r++) {
+          for (let c = 0; c < matrix[r].length; c++) {
+            applyPaint(s, r, c, matrix[r][c].isTarget);
+          }
+        }
+      }
+    }
+
+    function clearAnswersUI() {
+      for (let s = 0; s < gridMatrices.length; s++) {
+        for (let i = 1; i <= 10; i++) {
+          const input = document.getElementById(`eq-input-${s}-${i}`);
+          if (input) {
+            input.value = '';
+            input.style.color = '';
+          }
+        }
+      }
+      clearColoring();
+    }
+
+    function clearColoring() {
+      for (let s = 0; s < gridMatrices.length; s++) {
+        const matrix = gridMatrices[s];
+        for (let r = 0; r < matrix.length; r++) {
+          for (let c = 0; c < matrix[r].length; c++) {
+            applyPaint(s, r, c, false);
+          }
+        }
+      }
+    }
+
+    function checkAnswers() {
+      let resultsHtml = '';
+      let allPerfect = true;
+      let almostPerfect = false;
+
+      for (let s = 0; s < gridMatrices.length; s++) {
+        let eqCorrect = 0;
+        let totalTarget = 0;
+        let gridCorrectCount = 0;
+        let totalMistakes = 0;
+
+        for (let i = 1; i <= 10; i++) {
+          const input = document.getElementById(`eq-input-${s}-${i}`);
+          if (!input) continue;
+          const userVal = parseInt(input.value.trim());
+          const correctVal = parseInt(input.dataset.ans);
+          if (userVal === correctVal) {
+            eqCorrect++;
+            input.classList.remove('border-red-500');
+            input.classList.add('border-emerald-500');
+          } else {
+            input.classList.remove('border-emerald-500');
+            input.classList.add('border-red-500');
+          }
         }
 
-        function toggleAnswer() {
-            isShowingAnswer = !isShowingAnswer;
-            document.querySelectorAll('[id^="cell-"]').forEach(cell => {
-                const isAns = cell.getAttribute('data-ans') === 'true';
-                if (isShowingAnswer) {
-                    cell.className = isAns ? `grid-cell ${colors[currentColorTheme].bg}` : `grid-cell bg-white`;
-                } else {
-                    const isPainted = cell.getAttribute('data-painted') === 'true';
-                    cell.className = isPainted ? `grid-cell ${colors[currentColorTheme].bg}` : `grid-cell bg-white`;
-                }
-            });
-
-            for (let i = 1; i <= 10; i++) {
-                const el = document.getElementById(`eq-input-${i}`);
-                if (el) el.value = isShowingAnswer ? (currentMultiplier * i) : '';
+        const matrix = gridMatrices[s];
+        for (let r = 0; r < matrix.length; r++) {
+          for (let c = 0; c < matrix[r].length; c++) {
+            const item = matrix[r][c];
+            if (item.isTarget) {
+              totalTarget++;
+              if (item.painted) gridCorrectCount++;
+              else totalMistakes++;
+            } else {
+              if (item.painted) totalMistakes++;
             }
+          }
         }
 
-        function verifyAnswer() {
-            const sheets = currentLayout === 'portrait-2' ? [0, 1] : [0];
-            
-            let eqCorrect = 0;
-            for (let i = 1; i <= 10; i++) {
-                const input = document.getElementById(`eq-input-${i}`);
-                if (input && parseInt(input.value.trim(), 10) === currentMultiplier * i) {
-                    eqCorrect++;
-                }
-            }
+        const gridScore = totalTarget > 0 ? Math.max(0, Math.round(((totalTarget - totalMistakes) / totalTarget) * 100)) : 0;
+        const totalScoreForSheet = Math.round((eqCorrect * 5) + (gridScore * 0.5)); 
 
-            let modalHtml = `
-            <div class="text-center border-b pb-3 mb-4">
-                <h3 class="text-2xl font-black text-slate-800 tracking-tight">📝 驗算批改結果</h3>
-                <div class="mt-2 inline-flex items-center px-4 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-sm font-bold text-slate-700">
-                    🧮 乘法算式答對：<span class="text-orange-600 font-black ml-1 text-base">${eqCorrect} / 10 題</span>
-                </div>
-            </div>`;
-            
-            modalHtml += `<div class="grid grid-cols-${sheets.length} gap-4">`;
-
-            sheets.forEach(s => {
-                let correctCount = 0, wrongCount = 0, missedCount = 0, totalTarget = 0;
-                
-                for (let r = 0; r < ROWS; r++) {
-                    for (let c = 0; c < COLS; c++) {
-                        const cell = document.getElementById(`cell-sheet-${s}-${r}-${c}`);
-                        if (!cell) continue;
-                        const isAns = cell.getAttribute('data-ans') === 'true';
-                        const isPainted = cell.getAttribute('data-painted') === 'true';
-                        
-                        if (isAns) totalTarget++;
-                        if (isAns && isPainted) correctCount++;
-                        if (!isAns && isPainted) wrongCount++;
-                        if (isAns && !isPainted) missedCount++;
-                    }
-                }
-
-                let score = Math.max(0, 100 - (wrongCount * 2) - (missedCount * 2));
-                if (correctCount === 0) score = 0;
-                
-                const titleStr = sheets.length === 2 ? (s === 0 ? '上題' : '下題') : '本次塗色表現';
-                const scoreColor = score === 100 ? 'text-emerald-500' : (score >= 80 ? 'text-orange-500' : 'text-rose-500');
-
-                modalHtml += `
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-between">
-                    <div>
-                        <h4 class="font-bold text-base text-slate-700 mb-3 text-center bg-white py-1 rounded shadow-sm">${titleStr}</h4>
-                        <ul class="text-slate-600 font-bold space-y-2 text-xs md:text-sm mb-4">
-                            <li class="flex justify-between"><span>✅ 找對格數：</span><span class="text-emerald-600 font-black">${correctCount} / ${totalTarget}</span></li>
-                            <li class="flex justify-between"><span>❌ 塗錯格數：</span><span class="text-rose-500 font-black">${wrongCount}</span></li>
-                            <li class="flex justify-between"><span>⚠️ 漏塗格數：</span><span class="text-amber-500 font-black">${missedCount}</span></li>
-                        </ul>
-                    </div>
-                    <div class="text-center pt-2 border-t border-slate-200">
-                        <span class="text-xs font-bold text-slate-500">圖形塗色得分</span>
-                        <div class="text-3xl font-black ${scoreColor}">${score}</div>
-                    </div>
-                </div>`;
-            });
-
-            modalHtml += `</div>`;
-            modalHtml += `<button onclick="closeModal()" class="mt-5 w-full py-2.5 bg-slate-800 text-white rounded-xl font-black hover:bg-slate-700 shadow transition">完成 / 關閉</button>`;
-            
-            const modal = document.getElementById('result-modal');
-            const content = document.getElementById('result-modal-content');
-            content.innerHTML = modalHtml;
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                content.classList.remove('scale-95', 'opacity-0');
-                content.classList.add('scale-100', 'opacity-100');
-            }, 10);
+        const scoreDisplay = document.getElementById(`score-display-${s}`);
+        if(scoreDisplay) {
+            scoreDisplay.innerHTML = `得分：<span class="inline-block border-b-2 border-slate-900 w-12 sm:w-16 text-center text-red-600 text-base sm:text-lg font-black">${totalScoreForSheet}</span>`;
         }
 
-        function closeModal() {
-            const modal = document.getElementById('result-modal');
-            const content = document.getElementById('result-modal-content');
-            content.classList.remove('scale-100', 'opacity-100');
-            content.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => modal.classList.add('hidden'), 250);
-        }
+        if (eqCorrect !== 10 || gridScore !== 100) allPerfect = false;
+        if (gridScore > 70 && gridScore < 100) almostPerfect = true;
 
-        window.onload = init;
-    </script>
+        const title = gridMatrices.length > 1 ? `第 ${s + 1} 題` : `作答結果`;
+
+        resultsHtml += `
+          <div class="bg-slate-50 p-4 rounded-xl text-left space-y-2 text-sm font-semibold text-slate-700 shadow-sm border border-slate-100">
+            <div class="text-orange-600 font-black mb-2 border-b border-slate-200 pb-1.5 text-base">${title}</div>
+            <div class="flex justify-between items-center">
+              <span>乘法算式：</span>
+              <span class="font-bold text-slate-800">對了 ${eqCorrect} / 10 題</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span>圖案著色完成度：</span>
+              <span class="font-bold text-slate-800">${gridScore}%</span>
+            </div>
+            <div class="flex justify-between items-center text-red-600 pt-1">
+              <span>本題總得分：</span>
+              <span class="font-bold text-lg">${totalScoreForSheet} 分</span>
+            </div>
+          </div>
+        `;
+      }
+
+      const modal = document.getElementById('result-modal');
+      const icon = document.getElementById('modal-icon');
+      const msgEl = document.getElementById('modal-msg');
+      const detailsContainer = document.getElementById('modal-details-container');
+
+      detailsContainer.innerHTML = resultsHtml;
+
+      if (allPerfect) {
+        icon.innerText = '🎉';
+        msgEl.innerText = '太棒了！全對！隱藏數字成功顯現了！';
+      } else if (almostPerfect) {
+        icon.innerText = '👍';
+        msgEl.innerText = '做得很好！只差一點點就全對囉！';
+      } else {
+        icon.innerText = '💪';
+        msgEl.innerText = '再仔細檢查看看乘法算式與著色方格喔！';
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('result-modal').classList.add('hidden');
+    }
+
+    function printWorksheet() {
+      try {
+        window.print();
+      } catch (err) {
+        document.getElementById('print-modal').classList.remove('hidden');
+      }
+    }
+
+    function closePrintModal() {
+      document.getElementById('print-modal').classList.add('hidden');
+    }
+  </script>
 </body>
 </html>
